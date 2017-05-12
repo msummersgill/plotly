@@ -33,11 +33,7 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   ## the copy being created here could be eliminated for all cases except where column names are duplicated -- 
   ## wouldn't save much time, but could lower amt. of memory allocation required for plotly calls.
   
-  if(data.table::is.data.table(data)){
-    data <- data[,unique(names(data)),with=FALSE]
-  } else {
-    data <- data[!duplicated(names(data))]
-  }
+  data <- data[!duplicated(names(data))]
   
   ## store class information from function input
   retrace <- force(retrace.first)
@@ -52,7 +48,7 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   if (!length(groupNames)) {
     if (length(ordered)) {
       return(
-          data.table::setDT(data,key = c(nested, ordered)) %>%
+        data.table::setDT(data,key = c(nested, ordered)) %>%
           structure(class = datClass)
       )
     } else {
@@ -74,7 +70,7 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
     )
   } else {
     return(      
-        data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), .N+1L)], by=allVars]$V1 ][-.N,] %>%
+      data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), .N+1L)], by=allVars]$V1 ][-.N,] %>%
         structure(class = datClass)
     )
   }
