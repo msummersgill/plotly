@@ -50,7 +50,7 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   
   ## if group doesn't exist, just arrange before returning
   if (!length(groupNames)) {
-    if (length(ordered)) {
+    if (length(c(nested, ordered))) {
       return(
           data.table::setDT(data,key = c(nested, ordered)) %>%
           structure(class = datClass)
@@ -69,12 +69,12 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   ## IMPORTANT: does it matter if operating w/data.table setDT() clobbers row names attribute?
   if (retrace.first) {
     return(
-      data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), 1L, .N+1L)], by=allVars]$V1 ][-.N,] %>% 
+      data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), 1L, .N+1L)], by=groupNames]$V1 ][-.N,] %>% 
         structure(class = datClass)
     )
   } else {
     return(      
-        data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), .N+1L)], by=allVars]$V1 ][-.N,] %>%
+        data.table::setDT(data, key = allVars)[ data[, .I[c(seq_along(.I), .N+1L)], by=groupNames]$V1 ][-.N,] %>%
         structure(class = datClass)
     )
   }
