@@ -79,6 +79,7 @@ layers2traces <- function(data, prestats_data, layout, p) {
   # 2. geom_smooth() is really geom_path() + geom_ribbon()
   datz <- list()
   paramz <- list()
+  layout <- if (is_dev_ggplot2()) layout else list(layout = layout)
   for (i in seq_along(data)) {
     # This has to be done in a loop, since some layers are really two layers,
     # (and we need to replicate the data/params in those cases)
@@ -291,6 +292,7 @@ to_basic.GeomSf <- function(data, prestats_data, layout, params, p, ...) {
   }
   if (length(d) == 1) d[[1]] else d
 }
+utils::globalVariables(c(".plotlySfType"))
 
 #' @export
 to_basic.GeomMap <- function(data, prestats_data, layout, params, p, ...) {
@@ -756,11 +758,11 @@ geom2trace.GeomBoxplot <- function(data, params, p) {
   compact(list(
     x = data[["x"]],
     y = data[["y"]],
+    hoverinfo = "y",
     key = data[["key"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "box",
-    hoverinfo = "y",
     fillcolor = toRGB(
       aes2plotly(data, params, "fill"),
       aes2plotly(data, params, "alpha")
