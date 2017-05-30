@@ -353,11 +353,7 @@ as_widget <- function(x, ...) {
       defaultHeight = 400
     ),
     preRenderHook = plotly_build,
-    dependencies = c(
-      list(typedArrayPolyfill()),
-      crosstalk::crosstalkLibs(),
-      list(plotlyMainBundle())
-    )
+    dependencies = c(crosstalk::crosstalkLibs(), list(typedArrayPolyfill()))
   )
   # set an ID to avoid the rmarkdown warning ('.Random.seed' is not an integer vector but of type 'NULL', so ignored)
   # note this will throw a warning in shiny, but it is at least less obtrusive
@@ -367,7 +363,7 @@ as_widget <- function(x, ...) {
 
 typedArrayPolyfill <- function() {
   htmltools::htmlDependency(
-    "typedarray", "0.1",
+    "typedarray", 0.1,
     src = depPath("typedarray"),
     script = "typedarray.min.js"
   )
@@ -375,14 +371,14 @@ typedArrayPolyfill <- function() {
 
 # TODO: suggest a plotlyBundles package that has trace-level bundles 
 # and bundle size at print time.
-plotlyMainBundle <- function() {
-  htmltools::htmlDependency(
-    "plotlyjs", "1.27.1",
-    src = depPath("plotlyjs"),
-    script = "plotly-latest.min.js",
-    stylesheet = "plotly-htmlwidgets.css"
-  )
-}
+# plotlyMainBundle <- function() {
+#   htmltools::htmlDependency(
+#     "plotlyjs", "1.27.1",
+#     src = depPath("plotlyjs"),
+#     script = "plotly-latest.min.js",
+#     stylesheet = "plotly-htmlwidgets.css"
+#   )
+# }
 
 #' Remove TypedArray polyfill
 #'
