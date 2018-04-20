@@ -23,7 +23,7 @@ add_data <- function(p, data = NULL) {
 #' 
 #' @inheritParams plot_ly
 #' @param p a plotly object
-#' @param inherit inherit attributes from \code{\link{plot_ly}()}?
+#' @param inherit inherit attributes from [plot_ly()]?
 #' @param z a numeric matrix
 #' @param x the x variable.
 #' @param y the y variable.
@@ -32,7 +32,7 @@ add_data <- function(p, data = NULL) {
 #' @param ymax a variable used to define the upper boundary of a polygon.
 #' @param xend "final" x position (in this context, x represents "start")
 #' @param yend "final" y position (in this context, y represents "start")
-#' @seealso \code{\link{plot_ly}()}
+#' @seealso [plot_ly()]
 #' @references \url{https://plot.ly/r/reference/}
 #' @author Carson Sievert
 #' @export
@@ -57,6 +57,7 @@ add_trace <- function(p, ...,
   
   # "native" plotly arguments
   attrs <- list(...)
+  attrs$inherit <- inherit
   
   if (!is.null(attrs[["group"]])) {
     warning("The group argument has been deprecated. Use group_by() or split instead.")
@@ -217,6 +218,61 @@ add_polygons <- function(p, x = NULL, y = NULL, ...,
 }
 
 
+
+#' @inheritParams add_trace
+#' @rdname add_trace
+#' @export
+#' @examples 
+#' 
+#' if (requireNamespace("sf", quietly = TRUE)) {
+#'   nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+#'   plot_ly() %>% add_sf(data = nc)
+#' }
+add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
+  try_library("sf", "add_sf")
+  dat <- plotly_data(add_data(p, data))
+  if (!is_sf(dat)) {
+    stop(
+      "The `data` for an `add_sf()` layer must be an sf object, ", 
+      "not an object of class: ", class(dat)[1],
+      call. = FALSE
+    )
+  }
+  if (is_mapbox(p) || is_geo(p)) dat <- st_cast_crs(dat)
+  bbox <- sf::st_bbox(dat)
+  set <- attr(dat, "set")
+  
+  d <- to_basic.GeomSf(dat)
+  
+  # to_basic() returns either a single data frame or a list of data frames
+  # (each data frame should be a a collection of the same feature type)
+  d <- if (is.data.frame(d)) list(d)
+  
+  # inherit attributes from the "first layer" (except the plotly_eval class)
+  attrz <- if (inherit) modify_list(unclass(p$x$attrs[[1]]), list(...)) else list(...)
+  
+  for (i in seq_along(d)) {
+    # sensible mode/style defaults based on the feature type (e.g. polygon, path, point)
+    attrs <- modify_list(sf_default_attrs(d[[i]]), attrz)
+    # scatter3d doesn't currently support fill
+    if ("z" %in% names(attrs)) attrs$fill <- NULL
+    args <- list(
+      p = p, 
+      class = "plotly_sf", 
+      x = x,
+      y = y,
+      `_bbox` = bbox,
+      set = set,
+      data = if ("group" %in% names(d[[i]])) group_by_(d[[i]], "group", add = TRUE) else d[[i]], 
+      inherit = inherit
+    )
+    p <- do.call(add_trace_classed, c(args, attrs))
+  }
+  
+  p
+}
+
+
 #' @inheritParams add_trace
 #' @rdname add_trace
 #' @export
@@ -268,7 +324,7 @@ add_area <- function(p, r = NULL, t = NULL, ...,
 #' @inheritParams add_trace
 #' @rdname add_trace
 #' @param values the value to associated with each slice of the pie.
-#' @param labels the labels (categories) corresponding to \code{values}.
+#' @param labels the labels (categories) corresponding to `values`.
 #' @export
 #' @examples 
 #' ds <- data.frame(
@@ -564,7 +620,7 @@ special_attrs <- function(trace) {
 #' @param p a plotly object.
 #' @param fun a function. Should take a plotly object as input and return a 
 #' modified plotly object.
-#' @param ... arguments passed to \code{fun}.
+#' @param ... arguments passed to `fun`.
 #' @export
 #' @examples
 #' 
@@ -608,7 +664,7 @@ add_fun <- function(p, fun, ...) {
 #' @param ... these arguments are documented at 
 #' \url{https://github.com/plotly/plotly.js/blob/master/src/components/annotations/attributes.js}
 #' @param data a data frame.
-#' @param inherit inherit attributes from \code{\link{plot_ly}()}?
+#' @param inherit inherit attributes from [plot_ly()]?
 #' @author Carson Sievert
 #' @export
 #' @examples

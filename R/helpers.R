@@ -63,9 +63,9 @@ colorbar_built <- function(p, ..., limits = NULL, which = 1) {
         # since the colorscale is in a different trace, retrain all traces
         p$x$data <- lapply(p$x$data, function(x) {
           col <- x$marker[["color"]]
-          x$marker[["color"]][col < limits[1] | limits[2] < col] <- NA
-          x$marker[["cmin"]] <- limits[1]
-          x$marker[["cmax"]] <- limits[2]
+          x$marker[["color"]][col < limits[1] | limits[2] < col] <- default(NA)
+          x$marker[["cmin"]] <- default(limits[1])
+          x$marker[["cmax"]] <- default(limits[2])
           x
         })
       }
@@ -87,7 +87,7 @@ colorbar_built <- function(p, ..., limits = NULL, which = 1) {
 #'
 #' @param p a plotly object.
 #' @export
-#' @seealso \code{\link{hide_legend}()}, \code{\link{hide_colorbar}()}
+#' @seealso [hide_legend()], [hide_colorbar()]
 #'
 
 hide_guides <- function(p) {
@@ -99,7 +99,7 @@ hide_guides <- function(p) {
 #' 
 #' @param p a plotly object.
 #' @export
-#' @seealso \code{\link{hide_legend}()}
+#' @seealso [hide_legend()]
 #' @examples
 #' 
 #' p <- plot_ly(mtcars, x = ~wt, y = ~cyl, color = ~cyl)
@@ -110,10 +110,10 @@ hide_colorbar <- function(p) {
   for (i in seq_along(p$x$data)) {
     trace <- p$x$data[[i]]
     if (has_attr(trace$type, "showscale")) {
-      p$x$data[[i]]$showscale <- FALSE
+      p$x$data[[i]]$showscale <- default(FALSE)
     }
     if (has_attr(trace$type, "marker")) {
-      p$x$data[[i]]$marker$showscale <- FALSE
+      p$x$data[[i]]$marker$showscale <- default(FALSE)
     }
   }
   p
@@ -123,7 +123,7 @@ hide_colorbar <- function(p) {
 #' 
 #' @param p a plotly object.
 #' @export
-#' @seealso \code{\link{hide_colorbar}()}
+#' @seealso [hide_colorbar()]
 #' @examples 
 #' 
 #' p <- plot_ly(mtcars, x = ~wt, y = ~cyl, color = ~factor(cyl))
@@ -144,7 +144,7 @@ hide_legend <- function(p) {
 #' @examples 
 #' 
 #' # currently no bargl trace type
-#' toWebGL(qplot(1:10))
+#' toWebGL(ggplot() + geom_bar(aes(1:10)))
 #' toWebGL(qplot(1:10, 1:10))
 #' 
 toWebGL <- function(p) {
@@ -158,9 +158,9 @@ toWebGL <- function(p) {
 
 #' Create a complete empty plotly graph.
 #' 
-#' Useful when used with \code{\link{subplot}()}
+#' Useful when used with [subplot()]
 #' 
-#' @param ... arguments passed onto \code{\link{plot_ly}()}
+#' @param ... arguments passed onto [plot_ly()]
 #' 
 #' @export
 plotly_empty <- function(...) {
@@ -175,11 +175,11 @@ plotly_empty <- function(...) {
 
 #' Convert a raster object to a data URI
 #' 
-#' Convenient embedding images via \code{\link{layout}()}
+#' Convenient embedding images via [layout()]
 #' \href{images}{https://plot.ly/r/reference/#layout-images}.
 #' 
-#' @param r an object coercable to a raster object via \code{\link{as.raster}()}
-#' @param ... arguments passed onto \code{\link{as.raster}()}.
+#' @param r an object coercable to a raster object via [as.raster()]
+#' @param ... arguments passed onto [as.raster()].
 #' @author Carson Sievert
 #' @export
 #' @examples

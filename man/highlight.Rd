@@ -12,38 +12,40 @@ highlight(p, on = "plotly_click", off, persistent = getOption("persistent",
 \arguments{
 \item{p}{a plotly visualization.}
 
-\item{on}{turn on a selection on which event(s)? To disable on events 
+\item{on}{turn on a selection on which event(s)? To disable on events
 altogether, use \code{NULL}. Currently the following are supported:
 \itemize{
- \item \code{'plotly_click'}
- \item \code{'plotly_hover'}
- \item \code{'plotly_selected'}: triggered through rectangular 
- (layout.dragmode = 'select') or lasso (layout.dragmode = 'lasso') brush.
- Currently only works for scatter traces with mode 'markers'.
+\item \code{'plotly_click'}
+\item \code{'plotly_hover'}
+\item \code{'plotly_selected'}: triggered through rectangular
+(layout.dragmode = 'select') or lasso (layout.dragmode = 'lasso') brush.
 }}
 
-\item{off}{turn off a selection on which event(s)? To disable off 
+\item{off}{turn off a selection on which event(s)? To disable off
 events altogether, use \code{NULL}. Currently the following are supported:
 \itemize{
- \item \code{'plotly_doubleclick'}: triggered on a double mouse click while
- (layout.dragmode = 'zoom') or (layout.dragmode = 'pan')
- \item \code{'plotly_deselect'}: triggered on a double mouse click while 
- (layout.dragmode = 'select') or (layout.dragmode = 'lasso')
- \item \code{'plotly_relayout'}: triggered whenever axes are rescaled 
- (i.e., clicking the home button in the modebar) or whenever the height/width
- of the plot changes.
+\item \code{'plotly_doubleclick'}: triggered on a double mouse click while
+(layout.dragmode = 'zoom') or (layout.dragmode = 'pan')
+\item \code{'plotly_deselect'}: triggered on a double mouse click while
+(layout.dragmode = 'select') or (layout.dragmode = 'lasso')
+\item \code{'plotly_relayout'}: triggered whenever axes are rescaled
+(i.e., clicking the home button in the modebar) or whenever the height/width
+of the plot changes.
 }}
 
-\item{persistent}{should selections persist (i.e., accumulate)?}
+\item{persistent}{should selections persist (i.e., accumulate)? We often
+refer to the default (\code{FALSE}) as a 'transient' selection mode;
+which is recommended, because one may switch from 'transient' to
+'persistent' selection by holding the shift key.}
 
 \item{dynamic}{should a widget for changing selection colors be included?}
 
-\item{color}{character string of color(s) to use for 
-highlighting selections. See \code{\link{toRGB}()} for valid color
+\item{color}{character string of color(s) to use for
+highlighting selections. See \code{\link[=toRGB]{toRGB()}} for valid color
 specifications. If \code{NULL} (the default), the color of selected marks
 are not altered.}
 
-\item{selectize}{provide a selectize.js widget for selecting keys? Note that 
+\item{selectize}{provide a selectize.js widget for selecting keys? Note that
 the label used for this widget derives from the groupName of the SharedData object.}
 
 \item{defaultValues}{a vector of values for setting a "default selection".
@@ -52,14 +54,14 @@ These values should match the key attribute.}
 \item{opacityDim}{a number between 0 and 1 used to reduce the
 opacity of non-selected traces (by multiplying with the existing opacity).}
 
-\item{selected}{attributes of the selection, see \code{\link{attrs_selected}()}.}
+\item{selected}{attributes of the selection, see \code{\link[=attrs_selected]{attrs_selected()}}.}
 
 \item{...}{currently not supported.}
 }
 \description{
 This function sets a variety of options for brushing (i.e., highlighting)
 multiple plots. These options are primarily designed for linking
-multiple plotly graphs, and may not behave as expected when linking 
+multiple plotly graphs, and may not behave as expected when linking
 plotly to another htmlwidget package via crosstalk. In some cases,
 other htmlwidgets will respect these options, such as persistent selection
 in leaflet (see \code{demo("highlight-leaflet", package = "plotly")}).
@@ -74,13 +76,11 @@ library(crosstalk)
 d <- SharedData$new(txhousing, ~city)
 p <- ggplot(d, aes(date, median, group = city)) + geom_line()
 gg <- ggplotly(p, tooltip = "city") 
-highlight(gg, persistent = TRUE, dynamic = TRUE)
+highlight(gg, dynamic = TRUE)
 
 # supply custom colors to the brush 
 cols <- toRGB(RColorBrewer::brewer.pal(3, "Dark2"), 0.5)
-highlight(
-  gg, on = "plotly_hover", color = cols, persistent = TRUE, dynamic = TRUE
-)
+highlight(gg, on = "plotly_hover", color = cols, dynamic = TRUE)
 
 # Use attrs_selected() for complete control over the selection appearance
 # note any relevant colors you specify here should override the color argument
@@ -90,17 +90,14 @@ s <- attrs_selected(
   marker = list(symbol = "x")
 )
 
-highlight(
- layout(gg, showlegend = TRUE),  
- selected = s, persistent = TRUE
-)
+highlight(layout(gg, showlegend = TRUE), selected = s)
 
 }
 \references{
 \url{https://cpsievert.github.io/plotly_book/linking-views-without-shiny.html}
 }
 \seealso{
-\code{\link{attrs_selected}()}
+\code{\link[=attrs_selected]{attrs_selected()}}
 }
 \author{
 Carson Sievert

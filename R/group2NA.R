@@ -8,7 +8,7 @@
 #' with missing values that separate the groups (instead of multiple traces), 
 #' In this case, one should also take care to make sure 
 #' \href{https://plot.ly/r/reference/#scatter-connectgaps}{connectgaps} 
-#' is set to \code{FALSE}.
+#' is set to `FALSE`.
 #' 
 #' @param data a data frame.
 #' @param groupNames character vector of grouping variable(s)
@@ -19,8 +19,8 @@
 #' @param retrace.first should the first row of each group be appended to the 
 #' last row? This is useful for enclosing polygons with lines.
 #' @export
-#' @return a data.frame with rows ordered by: \code{nested}, 
-#' then \code{groupNames}, then \code{ordered}. As long as \code{groupNames} 
+#' @return a data.frame with rows ordered by: `nested`, 
+#' then `groupNames`, then `ordered`. As long as `groupNames` 
 #' contains valid variable names, new rows will also be inserted to separate 
 #' the groups.
 #' @examples 
@@ -45,6 +45,12 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   
   if (NROW(data) == 0) return(data)
   
+  # for restoring class information on exit
+  datClass <- oldClass(data)
+  
+  # data.table doesn't play nice with list-columns
+  if (inherits(data, "sf")) data <- fortify_sf(data)
+  
   # evaluate this lazy argument now (in case we change class of data)
   retrace <- force(retrace.first)
   
@@ -52,9 +58,6 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   groupNames <- groupNames[groupNames %in% names(data)]
   nested <- nested[nested %in% names(data)]
   ordered <- ordered[ordered %in% names(data)]
-  
-  # for restoring class information on exit
-  datClass <- oldClass(data)
   
   dt <- data.table::as.data.table(data)
   

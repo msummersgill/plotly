@@ -1,8 +1,8 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.7.0
+Version: 4.7.1.9000
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
-    email = "cpsievert1@gmail.com"),
+    email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
     email = "chris@plot.ly"),
     person("Toby", "Hocking", role = "aut",
@@ -18,7 +18,7 @@ Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     person("Plotly Technologies Inc.", role = "cph"))
 License: MIT + file LICENSE
 Description: Easily translate 'ggplot2' graphs to an interactive web-based version and/or create custom web-based visualizations directly from R. Once uploaded to a 'plotly' account, 'plotly' graphs (and the data behind them) can be viewed and modified in a web browser.
-URL: https://plot.ly/r, https://cpsievert.github.io/plotly_book/, https://github.com/ropensci/plotly
+URL: https://plot.ly/r, https://cpsievert.github.io/plotly_book/, https://github.com/ropensci/plotly#readme
 BugReports: https://github.com/ropensci/plotly/issues
 Depends:
     R (>= 3.2.0),
@@ -33,13 +33,14 @@ Imports:
     viridisLite,
     base64enc,
     htmltools,
-    htmlwidgets (>= 0.8),
+    htmlwidgets (>= 0.9),
     tidyr,
     hexbin,
     RColorBrewer,
     dplyr,
     tibble,
     lazyeval (>= 0.2.0),
+    rlang,
     crosstalk,
     purrr,
     data.table
@@ -62,8 +63,14 @@ Suggests:
     listviewer,
     dendextend,
     sf,
+    maptools,
+    rgeos,
     RSelenium,
     png,
     IRdisplay
+Remotes:
+  tidyverse/ggplot2
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.0.1.9000
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)

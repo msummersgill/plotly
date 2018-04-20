@@ -6,11 +6,12 @@ Rapp.history
 *.DS_Store
 node_modules/
 build_site.R
+abbvie.R
 todo.R
-inst/examples/*.html
-inst/examples/*/*.html
+inst/examples/rmd/*.html
 inst/examples/*/rsconnect/*
 .Rproj.user
 Untitled*
 rsconnect/
 revdep/
+travis_debug.R

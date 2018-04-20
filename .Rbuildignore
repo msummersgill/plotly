@@ -5,12 +5,15 @@
 CONDUCT.md
 CONTRIBUTING.md
 build_site.R
+travis_debug.R
 todo.R
 .github/
-inst/examples/printing.html
+inst/examples/rmd/*.html
 inst/examples/flexdashboard
 Untitled*
 node_modules/
 rsconnect/
 revdep/
 ^LICENSE\.md$
+README.Rmd
+abbvie.R
