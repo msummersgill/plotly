@@ -63,7 +63,7 @@ layers2traces <- function(data, prestats_data, layout, p) {
       if (inherits(x, "GeomBar") && identical(aesName, "y")) {
         suffix <- format(x[["ymax"]] - x[["ymin"]], justify = "none")
       }
-      x$hovertext <- paste0(x$hovertext, prefix, suffix)
+      x$hovertext <- paste0(prefix, x$hovertext,  suffix)
     }
     x$hovertext <- x$hovertext %||% ""
     x

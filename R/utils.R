@@ -142,7 +142,8 @@ as_df <- function(x) {
 # arrange data if the vars exist, don't throw error if they don't
 arrange_safe <- function(data, vars) {
   vars <- vars[vars %in% names(data)]
-  if (length(vars)) dplyr::arrange_(data, .dots = vars) else data
+  if (length(vars)) data.table::setorderv(data, cols = vars) else data
+  
 }
 
 is_mapbox <- function(p) {
