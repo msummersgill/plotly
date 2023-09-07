@@ -1,9 +1,9 @@
-library(jsonlite)
+library(yyjsonr)
 library(ggplot2)
 
-stars <- fromJSON(
+stars <- yyjsonr::from_json_conn(
   "https://raw.githubusercontent.com/cpsievert/starline/master/data/stars.json", 
-  simplifyDataFrame = FALSE
+  vectors_to_df = FALSE
 )
 
 dats <- lapply(stars$repos, function(r) {

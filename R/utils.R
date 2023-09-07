@@ -396,7 +396,8 @@ supply_highlight_attrs <- function(p) {
       p <- htmlwidgets::onRender(
         p, sprintf(
           "function(el, x) { crosstalk.group('%s').var('selection').set(%s) }", 
-          i, jsonlite::toJSON(as.character(vals), auto_unbox = FALSE)
+          i, yyjson::to_json_str(as.character(vals),auto_unbox = FALSE)
+          
         )
       )
     }
@@ -1042,19 +1043,21 @@ grab <- function(what = "username") {
 
 # try to grab an object key from a JSON file (returns empty string on error)
 try_file <- function(f, what) {
-  tryCatch(jsonlite::read_json(f)[[what]], error = function(e) NULL)
+  tryCatch(yyjsonr::from_json_file(f)[[what]], error = function(e) NULL)
 }
 
 # preferred defaults for toJSON mapping
 to_JSON <- function(x, ...) {
-  jsonlite::toJSON(x, digits = 50, auto_unbox = TRUE, force = TRUE,
-                   null = "null", na = "null", 
-                   time_format = "%Y-%m-%d %H:%M:%OS6",  ...)
+  # jsonlite::toJSON(x, digits = 50, auto_unbox = TRUE, force = TRUE,
+  #                  null = "null", na = "null", 
+  #                  time_format = "%Y-%m-%d %H:%M:%OS6",  ...)
+  yyjsonr::to_json_str(x, auto_unbox = TRUE)
 }
 
 # preferred defaults for toJSON mapping
 from_JSON <- function(x, ...) {
-  jsonlite::parse_json(x, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
+  # jsonlite::parse_json(x, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
+  yyjsonr::from_json_str(x, vectors_to_df = FALSE)
 }
 
 i <- function(x) {

@@ -66,7 +66,8 @@ withr::with_dir(tmpdir, {
         overwrite = TRUE
       )
       # update plot schema
-      Schema <- jsonlite::fromJSON(Sys.glob("dist/plot-schema.json"))
+      Schema <- yyjsonr::from_json_file(Sys.glob("dist/plot-schema.json"))
+      
       withr::with_dir(
         pkg_dir, usethis::use_data(Schema, overwrite = TRUE, internal = TRUE)
       )

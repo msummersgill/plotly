@@ -3,7 +3,7 @@
 library(plotly)
 
 # acquire data
-ds <- jsonlite::fromJSON(
+ds <- yyjsonr::from_json_conn(
   "https://gist.githubusercontent.com/davenquinn/988167471993bc2ece29/raw/f38d9cb3dd86e315e237fde5d65e185c39c931c2/data.json"
 )
 df <- dplyr::bind_rows(ds, .id = "id")

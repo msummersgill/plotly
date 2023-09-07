@@ -5,9 +5,9 @@
 #   skip_on_travis()
 #   
 #   # get the values/x/y/z from the plotly.js mock this test is based on
-#   mock <- jsonlite::fromJSON(
+#   mock <- yyjsonr::from_json_conn(
 #     "https://raw.githubusercontent.com/plotly/plotly.js/32738b549dff09eb4e9a095cebc750a3a8ae1ffd/test/image/mocks/gl3d_isosurface_log-axis_slices_surface-fill.json", 
-#     simplifyVector = FALSE
+#     vectors_to_df = TRUE
 #   )
 #   
 #   p <- plot_ly(

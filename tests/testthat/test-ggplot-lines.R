@@ -49,7 +49,7 @@ test_that("Milliseconds are preserved with dynamic ticks", {
   gg <- ggplot(d, aes(t, y)) + geom_line()
   p <- ggplotly(gg, dynamicTicks = TRUE)
   j <- plotly_json(p, jsonedit = FALSE)
-  t2 <- jsonlite::fromJSON(j)$data$x[[1]] %>% 
+  t2 <- yyjsonr::from_json_str(j)$data$x[[1]] %>% 
     as.POSIXct(format = "%Y-%m-%d %H:%M:%OS")
   expect_equal(as.numeric(mean(diff(t2))), 0.1, tolerance = 0.01)
   expect_doppelganger_built(p, "line-milliseconds")

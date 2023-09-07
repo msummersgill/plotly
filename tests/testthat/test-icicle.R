@@ -1,7 +1,7 @@
 test_that(
   "icicle trace basically works", {
-    icicle <- jsonlite::fromJSON(
-      "https://raw.githubusercontent.com/plotly/plotly.js/master/test/image/mocks/uniformtext_icicle.json", simplifyVector = FALSE
+    icicle <- yyjsonr::from_json_conn(
+      "https://raw.githubusercontent.com/plotly/plotly.js/master/test/image/mocks/uniformtext_icicle.json", vectors_to_df = FALSE
     )
     expect_doppelganger(
       as_widget(icicle), 

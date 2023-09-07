@@ -167,7 +167,7 @@ event_data <- function(
   parseJSON <- if (event %in% c("plotly_legendclick", "plotly_legenddoubleclick")) {
     from_JSON
   } else {
-    function(x) jsonlite::parse_json(x, simplifyVector = TRUE)
+    function(x) yyjsonr::from_json_str(x, vectors_to_df = FALSE)
   }
   
   # Handle NULL sensibly
