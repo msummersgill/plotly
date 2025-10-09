@@ -100,43 +100,43 @@ test_that("Can overwrite a plot", {
   expect_false(identical(m$figure$layout$title, m2$figure$layout$title))
 })
 
-test_that("Can create plots with non-trivial src attributes", {
-  skip_cloud_tests()
-
-  expect_srcified <- function(x) {
-    expect_length(strsplit(x, ":")[[1]], 3)
-  }
-
-  expect_not_srcified <- function(x) {
-    expect_true(is.null(x))
-  }
-
-  # src-ifies data arrays, but not arrayOk of length 1
-  p <- plot_ly(x = 1:10, y = 1:10, marker = list(color = "red"))
-  res <- api_create(p)
-  trace <- res$figure$data[[1]]
-  expect_srcified(trace$xsrc)
-  expect_srcified(trace$ysrc)
-  expect_true(trace$marker$color == "red")
-
-  # can src-ify data[i].marker.color
-  p <- plot_ly(x = 1:10, y = 1:10, color = 1:10)
-  res <- api_create(p)
-  trace <- res$figure$data[[1]]
-  expect_srcified(trace$marker$colorsrc)
-
-  # can src-ify frames[i].data[i].marker.color
-  res <- p %>%
-    add_markers(frame = rep(1:2, 5)) %>%
-    api_create()
-  trace <- res$figure$frames[[1]]$data[[1]]
-  expect_srcified(trace$marker$colorsrc)
-
-  # doesn't src-ify layout arrays (layout.xaxis.tickvals)
-  res <- api_create(ggplot() + geom_bar(aes(1:10)))
-  expect_not_srcified(res$figure$layout$xaxis$tickvalssrc)
-
-})
+# test_that("Can create plots with non-trivial src attributes", {
+#   skip_cloud_tests()
+# 
+#   expect_srcified <- function(x) {
+#     expect_length(strsplit(x, ":")[[1]], 3)
+#   }
+# 
+#   expect_not_srcified <- function(x) {
+#     expect_true(is.null(x))
+#   }
+# 
+#   # src-ifies data arrays, but not arrayOk of length 1
+#   p <- plot_ly(x = 1:10, y = 1:10, marker = list(color = "red"))
+#   res <- api_create(p)
+#   trace <- res$figure$data[[1]]
+#   expect_srcified(trace$xsrc)
+#   expect_srcified(trace$ysrc)
+#   expect_true(trace$marker$color == "red")
+# 
+#   # can src-ify data[i].marker.color
+#   p <- plot_ly(x = 1:10, y = 1:10, color = 1:10)
+#   res <- api_create(p)
+#   trace <- res$figure$data[[1]]
+#   expect_srcified(trace$marker$colorsrc)
+# 
+#   # can src-ify frames[i].data[i].marker.color
+#   res <- p %>%
+#     add_markers(frame = rep(1:2, 5)) %>%
+#     api_create()
+#   trace <- res$figure$frames[[1]]$data[[1]]
+#   expect_srcified(trace$marker$colorsrc)
+# 
+#   # doesn't src-ify layout arrays (layout.xaxis.tickvals)
+#   res <- api_create(ggplot() + geom_bar(aes(1:10)))
+#   expect_not_srcified(res$figure$layout$xaxis$tickvalssrc)
+# 
+# })
 
 
 test_that("filename supports names with paths included ", {

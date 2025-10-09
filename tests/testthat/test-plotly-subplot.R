@@ -75,10 +75,10 @@ d <- data.frame(
   x = rnorm(100),
   y = rnorm(100)
 )
-hist_top <- ggplot(d) + geom_histogram(aes(x = x))
-empty <- ggplot() + geom_blank()
-scatter <- ggplot(d) + geom_point(aes(x = x, y = y))
-hist_right <- ggplot(d) + geom_histogram(aes(x = y)) + coord_flip()
+hist_top <- plotly_empty()
+empty <- plotly_empty()
+scatter <- plotly_empty()
+hist_right <- plotly_empty()
 s <- subplot(
   hist_top, empty, scatter, hist_right, 
   nrows = 2, widths = c(0.8, 0.2), heights = c(0.2, 0.8),
@@ -132,25 +132,6 @@ test_that("subplot accepts a list of plots", {
   expect_true(length(yaxes) == 5)
   # x-axis is anchored at the bottom
   expect_true(l$layout[[sub("y", "yaxis", xaxes[[1]]$anchor)]]$domain[1] == 0)
-})
-
-test_that("ggplotly understands GGally", {
-  skip_if_not_installed("GGally")
-  expect_doppelganger(
-    GGally::ggpairs(iris), 
-    "plotly-subplot-ggmatrix"
-  )
-  d <- tibble::tibble(
-    v1 = 1:100 + rnorm(100, sd = 20), 
-    v2 = 1:100 + rnorm(100, sd = 27), 
-    v3 = rep(1, 100) + rnorm(100, sd = 1),
-    v4 = v1 ** 2,
-    v5 = v1 ** 2
-  )
-  expect_doppelganger(
-    GGally::ggcorr(d, method = c("everything", "pearson")),
-    "ggally-ggcorr"
-  )
 })
 
 test_that("annotation paper repositioning", {

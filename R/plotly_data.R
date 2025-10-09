@@ -326,10 +326,3 @@ fortify.SharedData <- function(model, data, ...) {
   data[[crosstalk_key()]] <- key
   structure(data, set = set)
 }
-
-# yes, you can feed a plotly object into ggplot %^)
-#' @export
-ggplot.plotly <- function(data, mapping = aes(), ...,
-                          environment = parent.frame()) {
-  ggplot(plotly_data(data), mapping = mapping, ..., environment = environment)
-}

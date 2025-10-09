@@ -31,13 +31,6 @@ plotly_build.list <- function(p, registerFrames = TRUE) {
 }
 
 #' @export
-plotly_build.gg <- function(p, registerFrames = TRUE) {
-  # note: since preRenderHook = plotly_build in as_widget(),
-  # plotly_build.plotly() will be called on gg objects as well
-  plotly_build(ggplotly(p))
-}
-
-#' @export
 plotly_build.plotly <- function(p, registerFrames = TRUE) {
   
   # make this plot retrievable
@@ -550,9 +543,6 @@ registerFrames <- function(p, frameMapping = NULL) {
 
 
 train_data <- function(data, trace) {
-  if (inherits(trace, "plotly_ribbon")) {
-    data <- ribbon_dat(data)
-  }
   if (inherits(trace, "plotly_segment")) {
     # TODO: this could be faster, more efficient
     data$.plotlyGroupIndex <- seq_len(NROW(data))

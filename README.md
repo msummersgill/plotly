@@ -36,56 +36,6 @@ remotes::install_github("plotly/plotly")
 
 ## Getting started
 
-### Web-based ggplot2 graphics
-
-If you use [ggplot2](https://github.com/tidyverse/ggplot2), `ggplotly()`
-converts your static plots to an interactive web-based version\!
-
-``` r
-library(plotly)
-g <- ggplot(faithful, aes(x = eruptions, y = waiting)) +
-  stat_density_2d(aes(fill = ..level..), geom = "polygon") + 
-  xlim(1, 6) + ylim(40, 100)
-ggplotly(g)
-```
-
-![<https://i.imgur.com/G1rSArP.gifv>](https://i.imgur.com/G1rSArP.gif)
-
-By default, `ggplotly()` tries to replicate the static ggplot2 version
-exactly (before any interaction occurs), but sometimes you need greater
-control over the interactive behavior. The `ggplotly()` function itself
-has some convenient “high-level” arguments, such as `dynamicTicks`,
-which tells plotly.js to dynamically recompute axes, when appropriate.
-The `style()` function also comes in handy for *modifying* the
-underlying trace
-attributes (e.g. [hoveron](https://plotly.com/r/reference/#scatter-hoveron)) used to generate the plot:
-
-``` r
-gg <- ggplotly(g, dynamicTicks = "y")
-style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
-```
-
-![<https://i.imgur.com/qRvLgea.gifv>](https://imgur.com/qRvLgea.gif)
-
-Moreover, since `ggplotly()` returns a plotly object, you can apply
-essentially any function from the R package on that object. Some useful
-ones include `layout()` (for [customizing the
-layout](https://plotly-r.com/improving-ggplotly.html#modifying-layout)),
-`add_traces()` (and its higher-level `add_*()` siblings, for example
-`add_polygons()`, for [adding new
-traces/data](https://plotly-r.com/improving-ggplotly.html#leveraging-statistical-output)),
-`subplot()` (for [combining multiple plotly
-objects](https://plotly-r.com/arranging-views.html#arranging-plotly-objects)),
-and `plotly_json()` (for inspecting the underlying JSON sent to
-plotly.js).
-
-The `ggplotly()` function will also respect some “unofficial”
-**ggplot2** aesthetics, namely `text` (for [customizing the
-tooltip](https://plotly-r.com/controlling-tooltips.html#tooltip-text-ggplotly)),
-`frame` (for [creating
-animations](https://plotly-r.com/animating-views.html)),
-and `ids` (for ensuring sensible smooth transitions).
-
 ### Using plotly without ggplot2
 
 The `plot_ly()` function provides a more direct interface to plotly.js

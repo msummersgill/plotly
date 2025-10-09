@@ -86,13 +86,6 @@ layout(p2, barmode = "stack")
 
 ## customizing colors
 
-library(dplyr)
-ggplot2::diamonds %>% count(cut) %>%
-  plot_ly(x = cut, y = n, type = "bar", marker = list(color = toRGB("black")))
-
-# mapping a color variable
-ggplot2::diamonds %>% count(cut, clarity) %>%
-  plot_ly(x = cut, y = n, type = "bar", color = clarity)
 
 # ----------------------------------------------------------------------
 # https://plotly.com/r/box-plots/

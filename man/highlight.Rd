@@ -83,32 +83,6 @@ plotly to another htmlwidget package via crosstalk. In some cases,
 other htmlwidgets will respect these options, such as persistent selection
 in leaflet (see \code{demo("highlight-leaflet", package = "plotly")}).
 }
-\examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-
-# These examples are designed to show you how to highlight/brush a *single*
-# view. For examples of multiple linked views, see `demo(package = "plotly")` 
-
-d <- highlight_key(txhousing, ~city)
-p <- ggplot(d, aes(date, median, group = city)) + geom_line()
-gg <- ggplotly(p, tooltip = "city") 
-highlight(gg, dynamic = TRUE)
-
-# supply custom colors to the brush 
-cols <- toRGB(RColorBrewer::brewer.pal(3, "Dark2"), 0.5)
-highlight(gg, on = "plotly_hover", color = cols, dynamic = TRUE)
-
-# Use attrs_selected() for complete control over the selection appearance
-# note any relevant colors you specify here should override the color argument
-s <- attrs_selected(
-  showlegend = TRUE,
-  mode = "lines+markers",
-  marker = list(symbol = "x")
-)
-
-highlight(layout(gg, showlegend = TRUE), selected = s)
-\dontshow{\}) # examplesIf}
-}
 \references{
 \url{https://plotly-r.com/client-side-linking.html}
 }

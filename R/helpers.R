@@ -142,9 +142,6 @@ hide_colorbar <- function(p) {
 #' hide_legend(p)
 
 hide_legend <- function(p) {
-  if (ggplot2::is.ggplot(p)) {
-    p <- plotly_build(p)
-  }
   p$x$.hideLegend <- TRUE
   p
 }
@@ -153,16 +150,7 @@ hide_legend <- function(p) {
 #' 
 #' @param p a plotly or ggplot object.
 #' @export
-#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
-#' 
-#' # currently no bargl trace type
-#' toWebGL(ggplot() + geom_bar(aes(1:10)))
-#' toWebGL(qplot(1:10, 1:10))
-#' 
 toWebGL <- function(p) {
-  if (ggplot2::is.ggplot(p)) {
-    p <- plotly_build(p)
-  }
   p$x$.plotlyWebGl <- TRUE
   p
 }

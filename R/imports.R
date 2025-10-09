@@ -1,4 +1,3 @@
-#' @import ggplot2
 #' @importFrom grDevices col2rgb extendrange dev.list dev.off rgb as.raster
 #' @importFrom graphics layout
 #' @importFrom utils getFromNamespace modifyList data packageVersion browseURL str file.edit
