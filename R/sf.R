@@ -100,3 +100,44 @@ is_sf <- function(dat) {
   if (crosstalk::is.SharedData(dat)) dat <- dat$origData()
   inherits(dat, "sf")
 }
+
+to_basic.GeomSf <- function(data, prestats_data, layout, params, p, ...) {
+  
+  data <- sf::st_as_sf(data)
+  geom_type <- sf::st_geometry_type(data)
+  # st_cast should "expand" a collection into multiple rows (one per feature)
+  if ("GEOMETRYCOLLECTION" %in% geom_type) {
+    data <- sf::st_cast(data)
+    geom_type <- sf::st_geometry_type(data)
+  }
+  
+  basic_type <- dplyr::recode(
+    as.character(geom_type),
+    TRIANGLE = "GeomPolygon",
+    TIN = "GeomPolygon",
+    POLYHEDRALSURFACE = "GeomPolygon",
+    SURFACE = "GeomPolygon",
+    CURVE = "GeomPath",
+    MULTISURFACE = "GeomPolygon",
+    MULTICURVE = "GeomPath",
+    CURVEPOLYGON = "GeomPolygon",
+    COMPOUNDCURVE = "GeomPath",
+    CIRCULARSTRING = "GeomPath",
+    MULTIPOLYGON = "GeomPolygon",
+    MULTILINESTRING = "GeomPath",
+    MULTIPOINT = "GeomPoint",
+    POLYGON = "GeomPolygon",
+    LINESTRING = "GeomPath",
+    POINT = "GeomPoint"
+  )
+  
+  # return a list of data frames...one for every geometry (a la, GeomSmooth)
+  d <- split(data, basic_type)
+  for (i in seq_along(d)) {
+    d[[i]] <- prefix_class(
+      fortify_sf(d[[i]]), c(names(d)[[i]], "GeomSf")
+    )
+    d[[i]] <- remove_class(d[[i]], "sf")
+  }
+  if (length(d) == 1) d[[1]] else d
+}

@@ -124,10 +124,6 @@ api_create.plotly <- api_create_plot
 
 #' @rdname api
 #' @export
-api_create.ggplot <- api_create_plot
-
-#' @rdname api
-#' @export
 api_create.data.frame <- api_create_grid
 
 

@@ -99,10 +99,10 @@ plot_ly(y = rnorm(50), type = "box") %>%
 plot_ly(y = rnorm(50), type = "box", boxpoints = "all", jitter = 0.3,
         pointpos = -1.8)
 #' several box plots
-plot_ly(ggplot2::diamonds, y = price, color = cut, type = "box")
+plot_ly(diamonds, y = price, color = cut, type = "box")
 
 #' grouped box plots
-plot_ly(ggplot2::diamonds, x = cut, y = price, color = clarity, type = "box") %>%
+plot_ly(diamonds, x = cut, y = price, color = clarity, type = "box") %>%
   layout(boxmode = "group")
 
 # ----------------------------------------------------------------------

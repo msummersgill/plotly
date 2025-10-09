@@ -14,7 +14,7 @@ plotly_build(p, registerFrames = TRUE)
 \description{
 This generic function creates the list object sent to plotly.js
 for rendering. Using this function can be useful for overriding defaults
-provided by \code{ggplotly}/\code{plot_ly} or for debugging rendering
+provided by \code{plot_ly} or for debugging rendering
 errors.
 }
 \examples{

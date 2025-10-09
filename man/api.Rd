@@ -3,7 +3,6 @@
 \name{api_create}
 \alias{api_create}
 \alias{api_create.plotly}
-\alias{api_create.ggplot}
 \alias{api_create.data.frame}
 \alias{api_download_plot}
 \alias{api_download_grid}
@@ -19,14 +18,6 @@ api_create(
 )
 
 \method{api_create}{plotly}(
-  x = last_plot(),
-  filename = NULL,
-  fileopt = "overwrite",
-  sharing = "public",
-  ...
-)
-
-\method{api_create}{ggplot}(
   x = last_plot(),
   filename = NULL,
   fileopt = "overwrite",

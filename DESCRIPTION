@@ -50,8 +50,6 @@ Suggests:
     maps,
     hexbin,
     ggthemes,
-    GGally,
-    ggalluvial,
     testthat,
     knitr,
     shiny (>= 1.1.0),
@@ -73,8 +71,7 @@ Suggests:
     palmerpenguins,
     rversions,
     reticulate,
-    rsvg,
-    ggridges
+    rsvg
 LazyData: true
 RoxygenNote: 7.3.2
 Encoding: UTF-8
