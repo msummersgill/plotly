@@ -58,7 +58,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     if (!is.null(names(x$annotations))) {
       # font is the only list object, so store it, and attach after transposing
       font <- x$annotations[["font"]]
-      x$annotations <- purrr::transpose(lapply(x$annotations, function(x) {
+      x$annotations <- transpose_list(lapply(x$annotations, function(x) {
         as.list(rep(x, length.out = nAnnotations))
       }))
       for (i in seq_len(nAnnotations)) {
@@ -156,7 +156,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     }
     
     # if appropriate, tack on a group index
-    grps <- if (has_group(trace)) tryNULL(dplyr::group_vars(dat))
+    grps <- if (has_group(trace)) data_groups(dat)
     if (length(grps) && any(lengths(trace) == NROW(dat))) {
       trace[[".plotlyGroupIndex"]] <- interaction(dat[, grps, drop = F])
     }
@@ -204,7 +204,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     tr <- tr[vapply(tr, function(x) is.null(dim(x)) && is.atomic(x), logical(1))]
     # white-list customdata as this can be a non-atomic vector
     tr$customdata <- trace$customdata
-    builtData <- tibble::as_tibble(tr)
+    builtData <- columns_df(tr)
     # avoid clobbering I() (i.e., variables that shouldn't be scaled)
     for (i in seq_along(tr)) {
       if (inherits(tr[[i]], "AsIs")) builtData[[i]] <- I(builtData[[i]])
@@ -240,13 +240,14 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
         warning("Ignoring ", sum(!isComplete), " observations", call. = FALSE)
       }
       builtData[[".plotlyMissingIndex"]] <- cumsum(!isComplete)
-      builtData <- builtData[isComplete, ]
+      if (!all(isComplete)) builtData <- builtData[isComplete, , drop = FALSE]
       if (length(grps) && has_group(trace) && isTRUE(trace[["connectgaps"]])) {
         stop(
           "Can't use connectgaps=TRUE when data has group(s).", call. = FALSE
         )
       }
-      builtData[[".plotlyGroupIndex"]] <- interaction(
+      # (only traces drawn by group use it, see group2NA() below)
+      if (has_group(trace)) builtData[[".plotlyGroupIndex"]] <- interaction(
         builtData[[".plotlyGroupIndex"]] %||% "",
         builtData[[".plotlyMissingIndex"]]
       )
@@ -280,7 +281,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   
   # insert NAs to differentiate groups
   traces <- lapply(traces, function(x) {
-    d <- tibble::as_tibble(x[names(x) %in% x$.plotlyVariableMapping])
+    d <- columns_df(x[names(x) %in% x$.plotlyVariableMapping])
     d <- group2NA(
       d, if (has_group(x)) ".plotlyGroupIndex",
       ordered = if (inherits(x, "plotly_line")) "x",
@@ -569,7 +570,7 @@ train_data <- function(data, trace) {
     idx2 <- seq.int(2, NROW(dat), by = 2)
     dat[idx2, "x"] <- data[["xend"]]
     dat[idx2, "y"] <- data[["yend"]]
-    data <- group_by_add(dat, !!rlang::sym(".plotlyGroupIndex"))
+    data <- dat
   }
   
   # TODO: a lot more geoms!!!
@@ -676,8 +677,6 @@ map_size <- function(traces, stroke = FALSE) {
 }
 
 # appends a new (empty) trace to generate (plot-wide) colorbar/colorscale
-#' @importFrom rlang is_na
-#
 map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "transparent") {
   color <- if (stroke) {
     lapply(traces, function(x) { x[["stroke"]] %||% x[["color"]] })
@@ -1004,7 +1003,8 @@ traceify <- function(dat, x = NULL) {
   }
   new_dat <- list()
   for (j in seq_along(lvls)) {
-    new_dat[[j]] <- lapply(dat, function(y) recurse(y, n, x %in% lvls[j]))
+    idx <- x %in% lvls[j]
+    new_dat[[j]] <- if (all(idx)) dat else lapply(dat, function(y) recurse(y, n, idx))
     new_dat[[j]]$name <- new_dat[[j]]$name %||% lvls[j]
   }
   return(new_dat)
@@ -1012,8 +1012,8 @@ traceify <- function(dat, x = NULL) {
 
 
 eval_attr <- function(x, data = NULL) {
-  if (rlang::is_formula(x)) rlang::eval_tidy(rlang::f_rhs(x), data = data,
-                                             env = rlang::f_env(x)) else x
+  if (!inherits(x, "formula")) return(x)
+  eval(x[[length(x)]], c(as.list(data), list(.data = data)), environment(x))
 }
 
 # overwrite defaults with the user defined palette

@@ -100,6 +100,20 @@ getLevels <- function(x) {
 }
 
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
+
+# Base R helpers for plotly_build() (rather than tidyverse functions):
+# a data frame of the columns in `x` (length-1 ones recycled; list columns kept)
+columns_df <- function(x) {
+  n <- max(c(0L, lengths(x)))
+  x[] <- lapply(x, function(v) if (length(v) == 1L && n != 1L) v[rep(1L, n)] else v)
+  structure(x, class = "data.frame", row.names = .set_row_names(n))
+}
+# the grouping variables of grouped (dplyr) data
+data_groups <- function(d) if (inherits(d, "grouped_df")) setdiff(names(attr(d, "groups")), ".rows")
+# a list of lists, inside out (as purrr::transpose())
+transpose_list <- function(l) lapply(seq_along(l[[1]]), function(i) lapply(l, `[[`, i))
+# a single missing value (as rlang::is_na())
+is_na <- function(x) length(x) == 1L && is.atomic(x) && is.na(x)
 tryFALSE <- function(expr) tryCatch(expr, error = function(e) FALSE)
 
 # Don't attempt to do "tidy" data training on these trace types
@@ -135,7 +149,9 @@ crosstalk_key <- function() ".crossTalkKey"
 # arrange data if the vars exist, don't throw error if they don't
 arrange_safe <- function(data, vars) {
   vars <- vars[vars %in% names(data)]
-  if (length(vars)) dplyr::arrange(data, !!!rlang::syms(vars)) else data
+  if (!length(vars)) return(data)
+  idx <- do.call(order, c(unname(as.list(data)[vars]), method = "radix"))
+  if (is.unsorted(idx)) columns_df(lapply(data, `[`, idx)) else data
 }
 
 is_mapbox <- function(p) {
@@ -403,7 +419,7 @@ supply_highlight_attrs <- function(p) {
       }
       # Hash i (the crosstalk group id) so that it can be used
       # as an HTML id client-side (i.e., key shouldn't contain spaces)
-      groupId <- rlang::hash(i)
+      groupId <- digest::digest(i)
       
       # If the selectize payload has already been built, use that already built payload
       # (since it may have been modified at this point), unless there are new keys to consider
@@ -773,7 +789,7 @@ verify_key_type <- function(p) {
       p$x$data[[i]]$`_isSimpleKey` <- TRUE
       p$x$data[[i]]$`_isNestedKey` <- FALSE
     }
-    p$x$data[[i]]$`_isNestedKey` <- p$x$data[[i]]$`_isNestedKey` %||% !rlang::is_atomic(k)
+    p$x$data[[i]]$`_isNestedKey` <- p$x$data[[i]]$`_isNestedKey` %||% !is.atomic(k)
     # key values should always be strings
     if (p$x$data[[i]]$`_isNestedKey`) {
       p$x$data[[i]]$key <- lapply(p$x$data[[i]]$key, function(x) I(as.character(x)))
