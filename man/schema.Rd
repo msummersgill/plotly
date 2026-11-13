@@ -2,26 +2,32 @@
 % Please edit documentation in R/dev.R
 \name{schema}
 \alias{schema}
-\title{The plotly.js plot schema}
+\title{Acquire (and optionally display) plotly's plot schema}
 \usage{
 schema(jsonedit = interactive(), ...)
 }
 \arguments{
-\item{jsonedit}{Show it in an interactive viewer (needs the listviewer
-package)?}
+\item{jsonedit}{use \code{listviewer::jsonedit} to view the JSON?}
 
-\item{...}{Unused.}
-}
-\value{
-The schema as a list (invisibly): \code{traces}, \code{layout}, \code{frames},
-\code{animation}, \code{config} and \code{defs}, and \code{transforms}: the trace transforms
-\code{\link[=plot_ly]{plot_ly()}} applies in R (plotly.js 3 removed them).
+\item{...}{other options passed onto \code{listviewer::jsonedit}}
 }
 \description{
-The schema of the bundled plotly.js: every trace type and layout object
-with its attributes, as in the legacy package.
+The schema contains valid attributes names, their value type,
+default values (if any), and min/max values (if applicable).
 }
 \examples{
-s <- schema(jsonedit = FALSE)
-names(s$traces)
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+s <- schema()
+
+# retrieve acceptable `layout.mapbox.style` values
+if (!is.na(Sys.getenv('MAPBOX_TOKEN', NA))) {
+  styles <- s$layout$layoutAttributes$mapbox$style$values
+  subplot(
+    plot_mapbox() \%>\% layout(mapbox = list(style = styles[3])),
+    plot_mapbox() \%>\% layout(mapbox = list(style = styles[5]))
+  )
+}
+
+
+\dontshow{\}) # examplesIf}
 }

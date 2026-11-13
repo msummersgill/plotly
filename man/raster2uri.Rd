@@ -2,23 +2,45 @@
 % Please edit documentation in R/helpers.R
 \name{raster2uri}
 \alias{raster2uri}
-\title{Encode a raster as a data URI}
+\title{Encode a raster object as a data URI}
 \usage{
 raster2uri(r, ...)
 }
 \arguments{
-\item{r}{A raster, matrix or array.}
+\item{r}{an object coercable to a raster object via \code{\link[=as.raster]{as.raster()}}}
 
-\item{...}{Passed to \code{\link[grDevices:as.raster]{grDevices::as.raster()}}.}
-}
-\value{
-A character string.
+\item{...}{arguments passed onto \code{\link[=as.raster]{as.raster()}}.}
 }
 \description{
-Converts a raster (or matrix/array convertible with
-\code{\link[grDevices:as.raster]{grDevices::as.raster()}}) to a PNG data URI, e.g. for layout images.
-Requires the png package.
+Encode a raster object as a data URI, which is suitable for
+use with \code{layout()} \href{https://plotly.com/r/reference/#layout-images}{images}.
+This is especially convenient for embedding raster images on a plot in
+a self-contained fashion (i.e., so they don't depend on external URL links).
 }
 \examples{
-if (requireNamespace("png", quietly = TRUE)) substr(raster2uri(matrix(1:4 / 4, 2)), 1, 30)
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+# a red gradient (from ?as.raster)
+r <- as.raster(matrix(hcl(0, 80, seq(50, 80, 10)), nrow = 4, ncol = 5))
+plot(r)
+
+# embed the raster as an image
+plot_ly(x = 1, y = 1) \%>\% 
+  layout(
+    images = list(list(
+     source = raster2uri(r),
+     xref = "paper", 
+     yref = "paper", 
+     x = 0, y = 0, 
+     sizex = 0.5, sizey = 0.5, 
+     xanchor = "left", yanchor = "bottom"
+  ))
+ ) 
+\dontshow{\}) # examplesIf}
+}
+\references{
+\url{https://plotly-r.com/embedding-images.html}
+}
+\author{
+Carson Sievert
 }

@@ -1086,12 +1086,18 @@ ribbon_dat <- function(dat) {
   if (n == 0) return(dat)
   o <- order(dat[["x"]])
   o2 <- order(dat[["x"]], decreasing = TRUE)
-  others <- setdiff(names(dat), c("x", "ymin", "ymax", "y"))
-  rows <- c(o, o[n], o2)
-  out <- data.table::data.table(x = dat[["x"]][rows], y = c(dat[["ymin"]][c(o, o[n])], dat[["ymax"]][o2]))
-  for (k in others) data.table::set(out, j = k, value = dat[[k]][rows])
-  if (!data.table::is.data.table(dat)) out <- structure(as.data.frame(out), class = oldClass(dat))
-  out
+  used <- c("x", "ymin", "ymax", "y")
+  not_used <- setdiff(names(dat), used)
+  # top-half of ribbon
+  tmp <- dat[o, ]
+  others <- tmp[not_used]
+  dat1 <- cbind(x = tmp[["x"]], y = tmp[["ymin"]], others)
+  dat1[n+1, ] <- data.frame(x = tmp[["x"]][n], y = tmp[["ymin"]][n], others[n, ])
+  # bottom-half of ribbon
+  tmp2 <- dat[o2, ]
+  others2 <- tmp2[not_used]
+  dat2 <- cbind(x = tmp2[["x"]], y = tmp2[["ymax"]], others2)
+  structure(rbind(dat1, dat2), class = oldClass(dat))
 }
 
 aes2plotly <- function(data, params, aes = "size") {

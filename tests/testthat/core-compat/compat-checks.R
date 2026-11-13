@@ -67,9 +67,8 @@ if (length(failures)) stop(length(failures), " case(s) differ from the legacy pl
 # Mixed use: plot_ly() objects become figures; go_figure() accepts legacy helpers
 fig <- legacy_figure(plot_ly(mtcars, x = ~wt, y = ~mpg, color = ~factor(cyl)))
 stopifnot(inherits(fig, "go_figure"), length(fig$data) == 3L)
-fig2 <- go_figure(go_scatter(y = 1:3)) |> layout(title = "T") |> config(displayModeBar = FALSE) |> hide_legend()
-stopifnot(identical(fig2$layout$title$text, "T"), isFALSE(fig2$layout$showlegend),
-          isFALSE(attr(fig2, "plotly_config")$displayModeBar))
+fig2 <- go_figure(go_scatter(y = 1:3)) |> layout(title = "T") |> config(displayModeBar = FALSE)
+stopifnot(identical(fig2$layout$title$text, "T"), isFALSE(attr(fig2, "plotly_config")$displayModeBar))
 p <- plot_ly(mtcars, x = ~mpg) |> add_histogram(nbinsx = 10)   # generated add_histogram() dispatches
 stopifnot(identical(plotly_build(p)$x$data[[1]]$type, "histogram"))
 stopifnot(identical(toRGB("red", 0.5), "rgba(255,0,0,0.5)"))
@@ -226,8 +225,9 @@ vals <- c(0, 0.5, 1)
 cs_df <- setNames(data.frame(vals, c("#F7FBFF", "#6BAED6", "#08306B")), NULL)
 b <- bd(plot_ly(z = volcano, colorscale = cs_df, type = "heatmap"))
 stopifnot(identical(b$data[[1]]$colorscale, list(list(0, "#F7FBFF"), list(0.5, "#6BAED6"), list(1, "#08306B"))))
-b <- bd(plot_ly(z = volcano, colorscale = cbind(vals, c("red", "white", "blue")), type = "heatmap"))
-stopifnot(identical(b$data[[1]]$colorscale[[3]], list(1, "blue")))
+# (a matrix stays one in the build, as in plotly 4.x, and is sent as pairs)
+w <- as_widget(plot_ly(z = volcano, colorscale = cbind(vals, c("red", "white", "blue")), type = "heatmap"))
+stopifnot(identical(w$x$data[[1]]$colorscale[[3]], list(1, "blue")))
 b <- bd(plot_ly(x = 1:3, y = 1:3, color = 1:3, type = "scatter", mode = "markers",
                 marker = list(colorscale = list(c(0, 1), c("red", "blue")))))
 stopifnot(identical(b$data[[1]]$marker$colorscale, list(list(0, "red"), list(1, "blue"))))

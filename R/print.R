@@ -4,4 +4,3 @@ print.plotly <- function(x, ...) {
   invisible(x)
 }
 
-

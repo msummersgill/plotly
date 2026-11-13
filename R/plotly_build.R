@@ -1,18 +1,21 @@
-#' Build a figure
+#' 'Build' (i.e., evaluate) a plotly object
 #'
-#' For [plot_ly()] objects, evaluates the attribute mappings against the data
-#' and returns the object with the resulting traces in `p$x$data`, layout in
-#' `p$x$layout` and frames in `p$x$frames` (as the legacy plotly package
-#' does). For a [go_figure()] it returns the htmlwidget that rendering
-#' would produce.
+#' This generic function creates the list object sent to plotly.js
+#' for rendering. Using this function can be useful for overriding defaults
+#' provided by `ggplotly`/`plot_ly` or for debugging rendering
+#' errors.
 #'
-#' @param p A [plot_ly()] object or [go_figure()].
-#' @param registerFrames Whether to register animation frames.
-#' @return A built object.
+#' @param p a ggplot object, or a plotly object, or a list.
+#' @param registerFrames should a frame trace attribute be interpreted as frames in an animation?
 #' @export
-#' @examples
-#' p <- mtcars |> plot_ly(x = ~wt, y = ~mpg, color = ~factor(cyl))
-#' length(plotly_build(p)$x$data)
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#'
+#' p <- plot_ly(economics, x = ~date, y = ~pce)
+#' # the unevaluated plotly object
+#' str(p)
+#' # the evaluated data
+#' str(plotly_build(p)$x$data)
+#'
 plotly_build <- function(p, registerFrames = TRUE) {
   if (inherits(p, "go_figure")) return(plotly_widget(p))
   if (is.null(p)) return(htmltools::browsable(htmltools::div()))
@@ -264,14 +267,20 @@ group_index <- function(vars) {
   data.table::frankv(rev(codes), ties.method = "dense", na.last = "keep")
 }
 
-is3d <- function(type) (type %||l% "scatter") %in% c("mesh3d", "scatter3d", "surface")
+# is a given trace type 3d?
+is3d <- function(type = NULL) {
+  type <- type %||% "scatter"
+  type %in% c("mesh3d", "scatter3d", "surface")
+}
 
 # ----------------------------------------------------------------
 # Functions used solely within plotly_build
 # ----------------------------------------------------------------
 
+
+
 train_data <- function(data, trace) {
-  if (inherits(trace, "plotly_ribbon")) data <- ribbon_dat(data)
+  if (inherits(trace, "plotly_ribbon")) data <- data.table::as.data.table(ribbon_dat(as.data.frame(data)))
   if (inherits(trace, "plotly_segment")) {
     data.table::set(data, j = ".plotlyGroupIndex", value = seq_len(NROW(data)))
     idx <- rep(seq_len(NROW(data)), each = 2)
@@ -284,6 +293,7 @@ train_data <- function(data, trace) {
   }
   data
 }
+
 
 map_size <- function(traces, stroke = FALSE) {
   key <- if (stroke) "span" else "size"
@@ -395,22 +405,39 @@ map_color <- function(traces, ...) {
   traces
 }
 
-# The legacy package's colorscale_json(): a colorscale as a name or a list of
-# [value, color] pairs.
+# Coerce `x` into a data structure that can map to a colorscale attribute.
+# Note that colorscales can either be the name of a scale (e.g., 'Rainbow') or 
+# a 2D array (e.g., [[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']])
 colorscale_json <- function(x) {
-  if (!length(x) || is_default(x)) return(x)
-  if (is.character(x) && !is.matrix(x)) return(x)
+  if (!length(x)) return(x)
+  if (is.character(x)) return(x)
   if (is.matrix(x)) {
-    if (ncol(x) != 2) stop("A colorscale matrix requires two columns", call. = FALSE)
-    x <- as.data.frame(x, stringsAsFactors = FALSE)
-    x[[1]] <- as.numeric(x[[1]])
+    if (ncol(x) != 2) stop("A colorscale matrix requires two columns")
+    x <- as.data.frame(x)
+    x[, 1] <- as.numeric(x[, 1])
   }
-  if (is.data.frame(x)) return(df_rows(x))
-  if (is.list(x) && length(x) == 2 && length(x[[1]]) > 1 && length(x[[1]]) == length(x[[2]]) &&
-      !is.list(x[[1]]) && !anyNA(suppressWarnings(as.numeric(x[[1]][!is.na(x[[1]])])))) {
-    return(Map(function(v, c) list(v, c), as.numeric(x[[1]]), as.character(x[[2]])))
+  # ensure a list like this: list(list(0, 0.5, 1), list("red", "white", "blue"))
+  # converts to the correct dimensions: [[0, 'red'], [0.5, 'white'], [1, 'blue']]
+  if (is.list(x) && length(x) == 2) {
+    n1 <- length(x[[1]])
+    n2 <- length(x[[2]])
+    if (n1 != n2 || n1 == 0 || n2 == 0) {
+      warning("A colorscale list must of elements of the same (non-zero) length")
+    } else if (!is.data.frame(x) && can_be_numeric(x[[1]])) {
+      x <- data.frame(
+        val = as.numeric(x[[1]]),
+        col = as.character(x[[2]]),
+        stringsAsFactors = FALSE
+      )
+      x <- setNames(x, NULL)
+    }
   }
   x
+}
+
+can_be_numeric <- function(x) {
+  xnum <- suppressWarnings(as.numeric(x))
+  sum(is.na(x)) == sum(is.na(xnum))
 }
 
 map_color_scale <- function(traces, stroke = FALSE, title = "", colorway, na.color = "transparent") {
@@ -549,7 +576,8 @@ supply_defaults <- function(p) {
 }
 
 is_type <- function(p, type) {
-  all(vapply(p$x$data, function(tr) tr[["type"]] %||l% "scatter", character(1)) %in% type)
+  types <- vapply(p$x$data, function(tr) tr[["type"]] %||% "scatter", character(1))
+  all(types %in% type)
 }
 
 cartesian2geo <- function(p) {
@@ -564,84 +592,113 @@ cartesian2geo <- function(p) {
   p
 }
 
+# populate categorical axes using categoryorder="array" & categoryarray=[]
 populate_categorical_axes <- function(p) {
-  axes <- p$x$layout[grepl("^xaxis|^yaxis", names(p$x$layout))]
-  if (!length(axes)) axes <- list(xaxis = NULL, yaxis = NULL)
+  axes <- p$x$layout[grepl("^xaxis|^yaxis", names(p$x$layout))] %||%
+    list(xaxis = NULL, yaxis = NULL)
   for (i in seq_along(axes)) {
     axis <- axes[[i]]
-    name <- names(axes)[[i]]
-    letter <- substr(name, 1, 1)
+    axisName <- names(axes)[[i]]
+    axisType <- substr(axisName, 0, 1)
+    # ggplotly() populates these attributes...don't want to clobber that
     if (!is.null(axis$ticktext) || !is.null(axis$tickvals)) next
-    on_axis <- function(tr) {
-      is.null(tr[["geo"]]) && sub("axis", "", name) %in% (tr[[sub("[0-9]+", "", name)]] %||l% letter) && !is.matrix(tr[["z"]])
+    # collect all the data that goes on this axis
+    d <- lapply(p$x$data, "[[", axisType)
+    isOnThisAxis <- function(tr) {
+      is.null(tr[["geo"]]) && sub("axis", "", axisName) %in% 
+        (tr[[sub("[0-9]+", "", axisName)]] %||% axisType) &&
+        # avoid reordering matrices (see #863)
+        !is.matrix(tr[["z"]])
     }
-    d <- lapply(p$x$data, `[[`, letter)[vapply(p$x$data, on_axis, logical(1))]
-    if (!length(d)) next
-    disc <- vapply(d, is_discrete, logical(1))
-    if (0 < sum(disc) && sum(disc) < length(d)) {
-      warning("Can't display both discrete & non-discrete data on same axis", call. = FALSE)
+    d <- d[vapply(p$x$data, isOnThisAxis, logical(1))]
+    if (length(d) == 0) next
+    isDiscrete <- vapply(d, is.discrete, logical(1))
+    if (0 < sum(isDiscrete) & sum(isDiscrete) < length(d)) {
+      warning(
+        "Can't display both discrete & non-discrete data on same axis", 
+        call. = FALSE
+      )
       next
     }
-    if (sum(disc) == 0) next
-    cats <- unique(unlist(lapply(d, getLevels)))
-    if (any(!vapply(d, is.factor, logical(1)))) cats <- sort(cats)
-    p$x$layout[[name]]$type <- p$x$layout[[name]]$type %||l% "category"
-    p$x$layout[[name]]$categoryorder <- p$x$layout[[name]]$categoryorder %||l% "array"
-    p$x$layout[[name]]$categoryarray <- p$x$layout[[name]]$categoryarray %||l% cats
+    if (sum(isDiscrete) == 0) next
+    categories <- lapply(d, getLevels)
+    categories <- unique(unlist(categories))
+    if (any(!vapply(d, is.factor, logical(1)))) categories <- sort(categories)
+    p$x$layout[[axisName]]$type <- 
+      p$x$layout[[axisName]]$type %||% "category"
+    p$x$layout[[axisName]]$categoryorder <- 
+      p$x$layout[[axisName]]$categoryorder %||% "array"
+    p$x$layout[[axisName]]$categoryarray <- 
+      p$x$layout[[axisName]]$categoryarray %||% categories
   }
   p
 }
 
+# Searches a list for character strings and translates R linebreaks to HTML 
+# linebreaks (i.e., '\n' -> '<br />'). JavaScript function definitions created 
+# via `htmlwidgets::JS()` are ignored
 translate_linebreaks <- function(p) {
   recurse <- function(a) {
-    if (is.list(a) && !is.data.frame(a)) {
+    typ <- typeof(a)
+    if (typ == "list") {
+      # retain the class of list elements 
+      # which is important for many things, such as colorbars
       a[] <- lapply(a, recurse)
+    } else if (typ == "character" && !inherits(a, "JS_EVAL")) {
+      attrs <- attributes(a)
+      a <- gsub("\n", br(), a, fixed = TRUE)
+      attributes(a) <- attrs
     } else if (is.factor(a)) {
       levels(a) <- gsub("\n", br(), levels(a), fixed = TRUE)
-    } else if (is.character(a)) {
-      at <- attributes(a)
-      a <- gsub("\n", br(), a, fixed = TRUE)
-      attributes(a) <- at
     }
     a
   }
-  p$x$data <- recurse(p$x$data)
-  p$x$layout <- recurse(p$x$layout)
+  p$x[] <- lapply(p$x, recurse)
   p
 }
 
-# Does obj contain a value that isn't a default? (Default-marked lists, such
-# as colorscales, count as defaults as a whole.)
-user_specified <- function(obj) {
+# if an object (e.g. trace.marker) contains a non-default attribute, it has been user-specified
+user_specified <- function(obj = NULL) {
   if (!length(obj)) return(FALSE)
-  user <- function(v) if (is_default(v)) FALSE else if (is.list(v)) any(vapply(v, user, logical(1))) else TRUE
-  user(obj)
+  !all(rapply(obj, is.default))
 }
 
 verify_mode <- function(p) {
-  for (i in seq_along(p$x$data)) {
-    tr <- p$x$data[[i]]
-    if (!grepl("scatter", tr$type %||l% "scatter")) next
-    if (user_specified(tr$marker) && !grepl("markers", tr$mode %||l% "")) {
-      message("A marker object has been specified, but markers is not in the mode\nAdding markers to the mode...")
-      p$x$data[[i]]$mode <- paste0(p$x$data[[i]]$mode, "+markers")
-    }
-    if (user_specified(tr$line) && !grepl("lines", tr$mode %||l% "")) {
-      message("A line object has been specified, but lines is not in the mode\nAdding lines to the mode...")
-      p$x$data[[i]]$mode <- paste0(p$x$data[[i]]$mode, "+lines")
-    }
-    if (user_specified(tr$textfont) && !grepl("text", tr$mode %||l% "")) {
-      warning("A textfont object has been specified, but text is not in the mode\nAdding text to the mode...", call. = FALSE)
-      p$x$data[[i]]$mode <- paste0(p$x$data[[i]]$mode, "+text")
+  for (tr in seq_along(p$x$data)) {
+    trace <- p$x$data[[tr]]
+    if (grepl("scatter", trace$type %||% "scatter")) {
+      if (user_specified(trace$marker) && !grepl("markers", trace$mode %||% "")) {
+        message(
+          "A marker object has been specified, but markers is not in the mode\n",
+          "Adding markers to the mode..."
+        )
+        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+markers")
+      }
+      if (user_specified(trace$line) && !grepl("lines", trace$mode %||% "")) {
+        message(
+          "A line object has been specified, but lines is not in the mode\n",
+          "Adding lines to the mode..."
+        )
+        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+lines")
+      }
+      if (user_specified(trace$textfont) && !grepl("text", trace$mode %||% "")) {
+        warning(
+          "A textfont object has been specified, but text is not in the mode\n",
+          "Adding text to the mode..."
+        )
+        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+text")
+      }
     }
   }
   p
 }
 
 verify_arrays <- function(p) {
-  for (k in c("annotations", "shapes", "images")) {
-    thing <- p$x$layout[[k]]
-    if (is.list(thing) && !is.null(names(thing))) p$x$layout[[k]] <- list(thing)
+  for (i in c("annotations", "shapes", "images")) {
+    thing <- p$x$layout[[i]]
+    if (is.list(thing) && !is.null(names(thing))) {
+      p$x$layout[[i]] <- list(thing)
+    }
   }
   p
 }
@@ -664,71 +721,119 @@ verify_webgl <- function(p) {
 }
 
 verify_showlegend <- function(p) {
-  if (isTRUE(p$x$.hideLegend)) p$x$layout$showlegend <- FALSE
-  show <- vapply(p$x$data, function(x) isTRUE(remove_class(x$showlegend %||l% TRUE, "plotly_default")), logical(1))
-  single_pie <- identical("pie", unlist(lapply(p$x$data, function(tr) tr$type)))
-  p$x$layout$showlegend <- p$x$layout$showlegend %|D|% default(sum(show) > 1 || single_pie)
+  # this attribute should be set in hide_legend()
+  # it ensures that "legend titles" go away in addition to showlegend = FALSE
+  if (isTRUE(p$x$.hideLegend)) {
+    p$x$layout$showlegend <- FALSE 
+  }
+  show <- vapply(p$x$data, function(x) x$showlegend %||% TRUE, logical(1))
+  # respect only _user-specified_ defaults 
+  isSinglePie <- identical("pie", unlist(lapply(p$x$data, function(tr) tr$type))) 
+  p$x$layout$showlegend <- p$x$layout$showlegend %|D|%
+    default(sum(show) > 1 || isTRUE(p$x$highlight$showInLegend) || isSinglePie)
   p
 }
 
-# Keys (event-data `key`, crosstalk keys) as character, as in plotly 4.x: a
-# trace whose key has one unique value (possibly a vector, e.g. the keys of
-# a fitted line's group) gets that value and `_isSimpleKey` (the whole trace
-# matches); list keys are nested (`_isNestedKey`). They stay in the traces
-# (with the crosstalk `set`) until legacy_figure() moves them to widget
-# settings (extract_keys()).
 verify_key_type <- function(p) {
-  p$x$data <- lapply(p$x$data, function(tr) {
-    k <- tr[["key"]]
-    if (is.null(k)) return(tr)
+  keys <- lapply(p$x$data, "[[", "key")
+  for (i in seq_along(keys)) {
+    k <- keys[[i]]
+    if (is.null(k)) next
     if ("select" %in% p$x$layout$clickmode && "plotly_click" %in% p$x$highlight$on) {
-      warning("`layout.clickmode` = 'select' is not designed to work well with ",
-              "the R package's linking framework (i.e. crosstalk support).", call. = FALSE)
+      warning(
+        "`layout.clickmode` = 'select' is not designed to work well with ",
+        "the R package's linking framework (i.e. crosstalk support).",
+        call. = FALSE
+      )
     }
-    u <- uniq(k)
-    if (length(u) == 1) {
-      tr$key <- u[[1]]
-      tr[["_isSimpleKey"]] <- TRUE
-      tr[["_isNestedKey"]] <- FALSE
+    # does it *ever* make sense to have a missing key value?
+    uk <- uniq(k)
+    if (length(uk) == 1) {
+      # i.e., the key for this trace has one value. In this case, 
+      # we don't have iterate through the entire key, so instead, 
+      # we provide a flag to inform client side logic to match the _entire_
+      # trace if this one key value is a match
+      p$x$data[[i]]$key <- uk[[1]]
+      p$x$data[[i]]$`_isSimpleKey` <- TRUE
+      p$x$data[[i]]$`_isNestedKey` <- FALSE
     }
-    tr[["_isNestedKey"]] <- tr[["_isNestedKey"]] %||l% !is.atomic(k)
-    tr$key <- if (isTRUE(tr[["_isNestedKey"]])) unname(lapply(tr$key, function(x) I(as.character(x))))
-              else I(as.character(tr$key))
-    tr
-  })
-  p
+    p$x$data[[i]]$`_isNestedKey` <- p$x$data[[i]]$`_isNestedKey` %||% !rlang::is_atomic(k)
+    # key values should always be strings
+    if (p$x$data[[i]]$`_isNestedKey`) {
+      p$x$data[[i]]$key <- lapply(p$x$data[[i]]$key, function(x) I(as.character(x)))
+      p$x$data[[i]]$key <- setNames(p$x$data[[i]]$key, NULL)
+    } else {
+      p$x$data[[i]]$key <- I(as.character(p$x$data[[i]]$key))
+    }
+  }
+  p 
 }
 
-is.colorbar <- function(tr) inherits(tr, "plotly_colorbar")
+is.colorbar <- function(tr) {
+  inherits(tr, "plotly_colorbar")
+}
 
 has_legend <- function(p) {
-  any(vapply(p$x$data, function(tr) !isFALSE(remove_class(tr$showlegend %||l% TRUE, "plotly_default")), logical(1))) &&
-    isTRUE(remove_class(p$x$layout$showlegend %|D|% TRUE, "plotly_default"))
+  showLegend <- function(tr) {
+    tr$showlegend %||% TRUE
+  }
+  any(vapply(p$x$data, showLegend, logical(1))) && 
+    isTRUE(p$x$layout$showlegend %|D|% TRUE)
 }
 
 verify_guides <- function(p) {
-  visible_bar <- function(tr) is.colorbar(tr) && !isFALSE(remove_class(tr$showscale %||l% TRUE, "plotly_default"))
-  is_bar <- vapply(p$x$data, visible_bar, logical(1))
-  if (any(is_bar) && has_legend(p) && length(p$x$data) <= 2) p$x$layout$showlegend <- default(FALSE)
-  n_guides <- sum(is_bar) + has_legend(p)
-  if (n_guides > 1) {
+  
+  # since colorbars are implemented as "invisible" traces, prevent a "trivial" legend
+  if (has_colorbar(p) && has_legend(p) && length(p$x$data) <= 2) {
+    p$x$layout$showlegend <- default(FALSE)
+  }
+  
+  isVisibleBar <- function(tr) {
+    is.colorbar(tr) && (tr$showscale %||% TRUE)
+  }
+  isBar <- vapply(p$x$data, isVisibleBar, logical(1))
+  nGuides <- sum(isBar) + has_legend(p)
+  
+  if (nGuides > 1) {
+    
+    # place legend at bottom since its scrolly
     yanchor <- default("top")
+    y <- default(1 - ((nGuides - 1) / nGuides))
     p$x$layout$legend$yanchor <- p$x$layout$legend$yanchor %|D|% yanchor
-    p$x$layout$legend$y <- p$x$layout$legend[["y"]] %|D|% default(1 - ((n_guides - 1) / n_guides))
-    idx <- which(is_bar)
+    p$x$layout$legend$y <- p$x$layout$legend[["y"]] %|D|% y
+    
+    # shrink/position colorbars
+    idx <- which(isBar)
     for (i in seq_along(idx)) {
+      len     <- default(1 / nGuides)
+      lenmode <- default("fraction")
+      y       <- default(1 - ((i - 1) / nGuides))
+      
       j <- idx[[i]]
       tr <- p$x$data[[j]]
-      vals <- list(len = default(1 / n_guides), lenmode = default("fraction"),
-                   y = default(1 - ((i - 1) / n_guides)), yanchor = yanchor)
       if (inherits(tr, "zcolor")) {
-        for (k in names(vals)) p$x$data[[j]]$colorbar[[k]] <- tr$colorbar[[k]] %|D|% vals[[k]]
+        p$x$data[[j]]$colorbar$len <- tr$colorbar$len %|D|% len
+        p$x$data[[j]]$colorbar$lenmode <- tr$colorbar$lenmode %|D|% lenmode
+        p$x$data[[j]]$colorbar$y <- tr$colorbar$y %|D|% y
+        p$x$data[[j]]$colorbar$yanchor <- tr$colorbar$yanchor %|D|% yanchor
       } else {
-        for (k in names(vals)) p$x$data[[j]]$marker$colorbar[[k]] <- tr$marker$colorbar[[k]] %|D|% vals[[k]]
+        p$x$data[[j]]$marker$colorbar$len <- tr$marker$colorbar$len %|D|% len
+        p$x$data[[j]]$marker$colorbar$lenmode <- tr$marker$colorbar$lenmode %|D|% lenmode
+        p$x$data[[j]]$marker$colorbar$y <- tr$marker$colorbar$y %|D|% y
+        p$x$data[[j]]$marker$colorbar$yanchor <- tr$marker$colorbar$yanchor %|D|% yanchor
       }
     }
+    
   }
+  
   p
+}
+
+has_colorbar <- function(p) {
+  isVisibleBar <- function(tr) {
+    is.colorbar(tr) && isTRUE(tr$showscale %||% TRUE)
+  }
+  any(vapply(p$x$data, isVisibleBar, logical(1)))
 }
 
 # Non-array attributes are reduced to their unique value; data arrays are
@@ -853,7 +958,7 @@ register_frames <- function(p, frame_mapping = NULL) {
   current <- if (length(frame_mapping) == 1) {
     list(prefix = paste0(frame_mapping, ": "), xanchor = "right", font = list(size = 16, color = toRGB("gray80")))
   }
-  p$animation <- p$animation %||l% animation_defaults()
+  p$animation <- p$animation %||l% animation_opts_defaults()
   types <- unique(unlist(lapply(p$x$frames, function(f) vapply(f$data, function(tr) tr$type %||l% "scatter", ""))))
   if (identical(types, "scatter") && is_default(p$animation$frame$redraw)) p$animation$frame$redraw <- default(FALSE)
   animation_button_supply(animation_slider_supply(p, currentvalue = current))
@@ -1076,21 +1181,28 @@ map_linetype <- function(traces) {
   traces
 }
 
+
+# break up a single trace into multiple traces according to values stored
+# a particular key name
 traceify <- function(dat, x = NULL) {
   if (length(x) == 0) return(list(dat))
   lvls <- if (is.factor(x)) levels(x) else unique(x)
   lvls <- lvls[lvls %in% x]
+  # the order of lvls determines the order in which traces are drawn
+  # for ordered factors at least, it makes sense to draw the highest level first
+  # since that _should_ be the darkest color in a sequential pallette
   if (is.ordered(x)) lvls <- rev(lvls)
   n <- length(x)
-  recurse <- function(z, idx) if (is.list(z) && !is.data.frame(z)) lapply(z, recurse, idx) else if (length(z) == n) z[idx] else z
-  # row indices of each level, in one pass
-  rows <- split(seq_len(n), factor(match(x, lvls), levels = seq_along(lvls)))
-  Map(function(l, idx) {
-    d <- lapply(dat, recurse, idx = idx)
-    oldClass(d) <- oldClass(dat)
-    d$name <- d$name %||l% as.character(l)
-    d
-  }, lvls, rows)
+  # recursively search for a non-list of appropriate length (if it is, subset it)
+  recurse <- function(z, n, idx) {
+    if (is.list(z)) lapply(z, recurse, n, idx) else if (length(z) == n) z[idx] else z
+  }
+  new_dat <- list()
+  for (j in seq_along(lvls)) {
+    new_dat[[j]] <- lapply(dat, function(y) recurse(y, n, x %in% lvls[j]))
+    new_dat[[j]]$name <- new_dat[[j]]$name %||% lvls[j]
+  }
+  return(new_dat)
 }
 
 verify_type <- function(trace) {
@@ -1125,33 +1237,55 @@ verify_type <- function(trace) {
 }
 
 verify_orientation <- function(trace) {
-  xn <- !is_discrete(trace[["x"]]) && !is.null(trace[["x"]])
-  yn <- !is_discrete(trace[["y"]]) && !is.null(trace[["y"]])
-  if (xn && !yn && any(c("bar", "box") %in% trace[["type"]])) trace$orientation <- "h"
-  if (yn && "histogram" %in% trace[["type"]]) trace$orientation <- "h"
+  xNumeric <- !is.discrete(trace[["x"]]) && !is.null(trace[["x"]] %||% NULL)
+  yNumeric <- !is.discrete(trace[["y"]]) && !is.null(trace[["y"]] %||% NULL)
+  if (xNumeric && !yNumeric) {
+    if (any(c("bar", "box") %in% trace[["type"]])) {
+      trace$orientation <- "h"
+    }
+  }
+  if (yNumeric && "histogram" %in% trace[["type"]]) {
+    trace$orientation <- "h"
+  }
   trace
 }
 
-# Evaluate a formula against the data; other values are returned as is.
+
 eval_attr <- function(x, data = NULL) {
-  if (!inherits(x, "formula")) return(x)
-  eval(x[[length(x)]], if (is.null(data)) list() else as.list(data), environment(x))
+  if (rlang::is_formula(x)) rlang::eval_tidy(rlang::f_rhs(x), data = data,
+                                             env = rlang::f_env(x)) else x
 }
 
+
+# helper functions
 array_ok <- function(type, path) {
   isTRUE(entry(paste(c(type, path), collapse = "."))$array_ok)
 }
 has_fill <- function(trace) {
-  type <- trace[["type"]] %||l% "scatter"
-  has_fillcolor <- has_attr(type, "fillcolor")
-  if (has_fillcolor && !has_attr(type, "fill")) return(TRUE)
-  has_fillcolor && isTRUE((trace[["fill"]] %||l% "none") != "none")
+  trace_type <- trace[["type"]] %||% "scatter"
+  # if trace type has fillcolor, but no fill attribute, then fill is always relevant
+  has_fillcolor <- has_attr(trace_type, "fillcolor")
+  has_fill <- has_attr(trace_type, "fill")
+  if (has_fillcolor && !has_fill) return(TRUE)
+  fill <- trace[["fill"]] %||% "none"
+  if (has_fillcolor && isTRUE(fill != "none")) return(TRUE)
+  FALSE
 }
 
+# ensure we've set a sensible trace defaults
+# based on the trace type
 coerce_attr_defaults <- function(trace, layout) {
-  if (length(trace[["stroke"]]) && !is_default(trace[["stroke"]])) trace$span <- trace[["span"]] %||l% default(I(1))
+  # if user has specified stroke, make sure the span 
+  # defaults to something greater than 0 (so they can see the stroke!)
+  if (length(trace[["stroke"]]) && !is.default(trace[["stroke"]])) {
+    trace$span <- trace[["span"]] %||% default(I(1))
+  }
   if (trace[["type"]] %in% c("sunburst", "pie", "treemap")) {
-    trace$stroke <- trace[["stroke"]] %||l% default(I(layout$paper_bgcolor %||l% "#ffffff"))
+    # As of v1.46.1, paper_bgcolor defaults to '#fff' which
+    # col2rgb() can't parse, but expands to '#ffffff'
+    # https://stackoverflow.com/a/2899224/1583084
+    bgcolor <- layout$paper_bgcolor %||% "#ffffff"
+    trace$stroke <- trace[["stroke"]] %||% default(I(bgcolor))
   }
   trace
 }

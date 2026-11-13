@@ -1,18 +1,27 @@
-#' The plotly.js plot schema
-#'
-#' The schema of the bundled plotly.js: every trace type and layout object
-#' with its attributes, as in the legacy package.
-#'
-#' @param jsonedit Show it in an interactive viewer (needs the listviewer
-#'   package)?
-#' @param ... Unused.
-#' @return The schema as a list (invisibly): `traces`, `layout`, `frames`,
-#'   `animation`, `config` and `defs`, and `transforms`: the trace transforms
-#'   [plot_ly()] applies in R (plotly.js 3 removed them).
+
+#' Acquire (and optionally display) plotly's plot schema
+#' 
+#' The schema contains valid attributes names, their value type, 
+#' default values (if any), and min/max values (if applicable).
+#' 
+#' @param jsonedit use `listviewer::jsonedit` to view the JSON?
+#' @param ... other options passed onto `listviewer::jsonedit`
 #' @export
-#' @examples
-#' s <- schema(jsonedit = FALSE)
-#' names(s$traces)
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' s <- schema()
+#' 
+#' # retrieve acceptable `layout.mapbox.style` values
+#' if (!is.na(Sys.getenv('MAPBOX_TOKEN', NA))) {
+#'   styles <- s$layout$layoutAttributes$mapbox$style$values
+#'   subplot(
+#'     plot_mapbox() %>% layout(mapbox = list(style = styles[3])),
+#'     plot_mapbox() %>% layout(mapbox = list(style = styles[5]))
+#'   )
+#' }
+#' 
+#' 
+#' 
+
 schema <- function(jsonedit = interactive(), ...) {
   s <- plotly.core::schema(jsonedit = FALSE)
   s$transforms <- transforms_schema()
@@ -23,7 +32,7 @@ schema <- function(jsonedit = interactive(), ...) {
   invisible(s)
 }
 
-# The transforms plot_ly() applies (R/lp-transforms.R), in the form of
+# The transforms plot_ly() applies (R/transforms.R), in the form of
 # plotly.js 2's schema.
 transforms_schema <- function() {
   enum <- function(values, dflt) list(valType = "enumerated", values = values, dflt = dflt)

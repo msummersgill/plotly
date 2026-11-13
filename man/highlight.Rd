@@ -2,7 +2,7 @@
 % Please edit documentation in R/highlight.R
 \name{highlight}
 \alias{highlight}
-\title{Linked highlighting (brushing) across plots}
+\title{Query graphical elements in multiple linked views}
 \usage{
 highlight(
   p,
@@ -20,65 +20,101 @@ highlight(
 )
 }
 \arguments{
-\item{p}{A \code{\link[=plot_ly]{plot_ly()}} object.}
+\item{p}{a plotly visualization.}
 
-\item{on}{Event that selects: \code{"plotly_click"}, \code{"plotly_hover"},
-\code{"plotly_selected"} (box or lasso selection) or \code{"plotly_selecting"}
-(while selecting). \code{NULL} disables selecting from the plot.}
+\item{on}{turn on a selection on which event(s)? To disable on events
+altogether, use \code{NULL}. Currently the following are supported:
+\itemize{
+\item \code{'plotly_click'}
+\item \code{'plotly_hover'}
+\item \code{'plotly_selected'}: triggered through rectangular
+(layout.dragmode = 'select') or lasso (layout.dragmode = 'lasso') brush.
+}}
 
-\item{off}{Event that clears the selection: \code{"plotly_doubleclick"},
-\code{"plotly_deselect"} or \code{"plotly_relayout"}. Default: the one matching
-\code{on}. \code{NULL} disables it.}
+\item{off}{turn off a selection on which event(s)? To disable off
+events altogether, use \code{NULL}. Currently the following are supported:
+\itemize{
+\item \code{'plotly_doubleclick'}: triggered on a double mouse click while
+(layout.dragmode = 'zoom') or (layout.dragmode = 'pan')
+\item \code{'plotly_deselect'}: triggered on a double mouse click while
+(layout.dragmode = 'select') or (layout.dragmode = 'lasso')
+\item \code{'plotly_relayout'}: triggered whenever axes are rescaled
+(i.e., clicking the home button in the modebar) or whenever the height/width
+of the plot changes.
+}}
 
-\item{persistent}{Accumulate selections instead of replacing them (the
-shift key does this temporarily)?}
+\item{persistent}{should selections persist (i.e., accumulate)? We often
+refer to the default (\code{FALSE}) as a 'transient' selection mode;
+which is recommended, because one may switch from 'transient' to
+'persistent' selection by holding the shift key.}
 
-\item{dynamic}{Add a colour picker for the selection colour?}
+\item{dynamic}{should a widget for changing selection colors be included?}
 
-\item{color}{Selection colour(s), or \code{NULL} to keep the marks' colours.
-Several colours are offered by the picker when \code{dynamic = TRUE}.}
+\item{color}{character string of color(s) to use for
+highlighting selections. See \code{\link[=toRGB]{toRGB()}} for valid color
+specifications. If \code{NULL} (the default), the color of selected marks
+are not altered.}
 
-\item{selectize}{Add a selectize.js dropdown for choosing keys (labelled
-with the \code{group} of \code{\link[=highlight_key]{highlight_key()}})? A list of selectize.js options may
-be given instead of \code{TRUE}.}
+\item{selectize}{whether or not to render a selectize.js widget for selecting
+\code{\link[=highlight_key]{highlight_key()}} values. A list of additional selectize.js options may
+also be provided. The label used for this widget should be set via the
+\code{groupName} argument of \code{\link[=highlight_key]{highlight_key()}}.}
 
-\item{defaultValues}{Keys selected when the plot is shown.}
+\item{defaultValues}{a vector of values for setting a "default selection".
+These values should match the key attribute.}
 
-\item{opacityDim}{Multiplier (0 to 1) for the opacity of unselected traces.}
+\item{opacityDim}{a number between 0 and 1 used to reduce the
+opacity of non-selected traces (by multiplying with the existing opacity).}
 
-\item{selected}{Attributes of the selection traces, see
-\code{\link[=attrs_selected]{attrs_selected()}}.}
+\item{selected}{attributes of the selection, see \code{\link[=attrs_selected]{attrs_selected()}}.}
 
-\item{debounce}{Milliseconds to wait before selecting (useful with
-\code{on = "plotly_hover"}).}
+\item{debounce}{amount of time to wait before firing an event (in milliseconds).
+The default of 0 means do not debounce at all.
+Debouncing is mainly useful when \code{on = "plotly_hover"} to avoid firing too many events
+when users clickly move the mouse over relevant graphical marks.}
 
-\item{...}{Not supported.}
-}
-\value{
-The plot.
+\item{...}{currently not supported.}
 }
 \description{
-Sets how selections are made and shown in plots whose data is a
-\code{\link[=highlight_key]{highlight_key()}} (a \link[crosstalk:SharedData]{crosstalk::SharedData} object). Selecting marks in
-one plot highlights the observations with the same keys in every plot (and
-other crosstalk-compatible htmlwidgets) sharing the data's group, without
-a Shiny server. Holding the shift key while selecting adds to the current
-selection. Requires the crosstalk package.
+This function sets a variety of options for brushing (i.e., highlighting)
+multiple plots. These options are primarily designed for linking
+multiple plotly graphs, and may not behave as expected when linking
+plotly to another htmlwidget package via crosstalk. In some cases,
+other htmlwidgets will respect these options, such as persistent selection
+in leaflet (see \code{demo("highlight-leaflet", package = "plotly")}).
 }
 \examples{
-\dontshow{if (requireNamespace("crosstalk", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-d <- mtcars |> highlight_key(~cyl)
-p <- d |> plot_ly(x = ~wt, y = ~mpg) |> add_markers()
-highlight(p, on = "plotly_selected", color = "red")
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 
-# two linked views of the same data
-s <- highlight_key(data.frame(x = 1:10, y = (1:10)^2, g = rep(c("a", "b"), 5)))
-subplot(
-  s |> plot_ly(x = ~x, y = ~y) |> add_markers(),
-  s |> plot_ly(x = ~g) |> add_histogram()
-) |> highlight(on = "plotly_selected", dynamic = TRUE)
+# These examples are designed to show you how to highlight/brush a *single*
+# view. For examples of multiple linked views, see `demo(package = "plotly")` 
+
+d <- highlight_key(txhousing, ~city)
+p <- ggplot(d, aes(date, median, group = city)) + geom_line()
+gg <- ggplotly(p, tooltip = "city") 
+highlight(gg, dynamic = TRUE)
+
+# supply custom colors to the brush 
+cols <- toRGB(RColorBrewer::brewer.pal(3, "Dark2"), 0.5)
+highlight(gg, on = "plotly_hover", color = cols, dynamic = TRUE)
+
+# Use attrs_selected() for complete control over the selection appearance
+# note any relevant colors you specify here should override the color argument
+s <- attrs_selected(
+  showlegend = TRUE,
+  mode = "lines+markers",
+  marker = list(symbol = "x")
+)
+
+highlight(layout(gg, showlegend = TRUE), selected = s)
 \dontshow{\}) # examplesIf}
 }
+\references{
+\url{https://plotly-r.com/client-side-linking.html}
+}
 \seealso{
-\code{\link[=highlight_key]{highlight_key()}}, \code{\link[crosstalk:bscols]{crosstalk::bscols()}} to arrange linked views.
+\code{\link[=attrs_selected]{attrs_selected()}}
+}
+\author{
+Carson Sievert
 }

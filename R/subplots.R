@@ -1,25 +1,65 @@
-#' Combine plots into a grid of subplots
-#'
-#' Arranges several plots in one figure, like the legacy plotly package's
-#' `subplot()`. Each plot's axes are renumbered and placed in a grid cell.
-#' For new code, [make_subplots()] offers more control.
-#'
-#' @param ... Plots ([plot_ly()] objects or [go_figure()]s), or one list of
-#'   them.
-#' @param nrows Number of rows.
-#' @param widths,heights Relative column widths and row heights (summing to
-#'   at most 1).
-#' @param margin Space between subplots, as a fraction of the figure: one
-#'   value, or four (left, right, top, bottom).
-#' @param shareX,shareY Share x axes within columns / y axes within rows?
-#' @param titleX,titleY Keep x / y axis titles?
-#' @param which_layout Which plots' layouts to use (`"merge"` for all).
-#' @return A [plot_ly()]-style object.
+#' View multiple plots in a single view
+#' 
+#' @param ... One of the following 
+#' \itemize{
+#'  \item any number of plotly/ggplot2 objects.
+#'  \item a list of plotly/ggplot2 objects.
+#'  \item a tibble with one list-column of plotly/ggplot2 objects.
+#' }
+#' @param nrows number of rows for laying out plots in a grid-like structure.
+#' Only used if no domain is already specified.
+#' @param widths relative width of each column on a 0-1 scale. By default all
+#' columns have an equal relative width.
+#' @param heights relative height of each row on a 0-1 scale. By default all
+#' rows have an equal relative height.
+#' @param margin either a single value or four values (all between 0 and 1).
+#' If four values are provided, the first is used as the left margin, the second
+#' is used as the right margin, the third is used as the top margin, and the
+#' fourth is used as the bottom margin.
+#' If a single value is provided, it will be used as all four margins. 
+#' @param shareX should the x-axis be shared amongst the subplots?
+#' @param shareY should the y-axis be shared amongst the subplots?
+#' @param titleX should x-axis titles be retained?
+#' @param titleY should y-axis titles be retained?
+#' @param which_layout adopt the layout of which plot? If the default value of 
+#' "merge" is used, layout options found later in the sequence of plots will 
+#' override options found earlier in the sequence. This argument also accepts a 
+#' numeric vector specifying which plots to consider when merging.
+#' @return A plotly object
 #' @export
-#' @examples
-#' p1 <- mtcars |> plot_ly(x = ~wt, y = ~mpg, type = "scatter", mode = "markers")
-#' p2 <- mtcars |> plot_ly(x = ~hp, y = ~mpg, type = "scatter", mode = "markers")
-#' subplot(p1, p2, shareY = TRUE, titleX = TRUE)
+#' @author Carson Sievert
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' # pass any number of plotly objects to subplot()
+#' p1 <- plot_ly(economics, x = ~date, y = ~uempmed)
+#' p2 <- plot_ly(economics, x = ~date, y = ~unemploy)
+#' subplot(p1, p2, p1, p2, nrows = 2, margin = 0.05)
+#' 
+#' #'  # anchor multiple traces on the same legend entry
+#'  p1 <- add_lines(p1, color = I("black"), name = "1st", legendgroup = "1st")
+#'  p2 <- add_lines(p2, color = I("red"), name = "2nd", legendgroup = "2nd")
+#'  
+#'  subplot(
+#'    p1, style(p1, showlegend = FALSE),
+#'    p2, style(p2, showlegend = FALSE),
+#'    nrows = 2, margin = 0.05
+#'  )
+#' 
+#' # or pass a list
+#' economics_long %>%
+#'   split(.$variable) %>%
+#'   lapply(function(d) plot_ly(d, x = ~date, y = ~value)) %>%
+#'   subplot(nrows = NROW(.), shareX = TRUE)
+#'   
+#' # or pass a tibble with a list-column of plotly objects
+#' economics_long %>%
+#'   group_by(variable) %>%
+#'   do(p = plot_ly(., x = ~date, y = ~value)) %>%
+#'   subplot(nrows = NROW(.), shareX = TRUE)
+#'   
+#' # learn more at https://plotly.com/r/subplots/
+#' 
+
 subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02, shareX = FALSE,
                     shareY = FALSE, titleX = shareX, titleY = shareY, which_layout = "merge") {
   plots <- list(...)
@@ -197,68 +237,109 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
 # Functions used solely within subplot()
 # ----------------------------------------------------------------
 
-get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL, heights = NULL) {
+
+
+get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, 
+                        widths = NULL, heights = NULL) {
   if (length(margins) == 1) margins <- rep(margins, 4)
   if (length(margins) != 4) stop("margins must be length 1 or 4", call. = FALSE)
   ncols <- ceiling(nplots / nrows)
-  widths <- widths %||l% rep(1 / ncols, ncols)
-  heights <- heights %||l% rep(1 / nrows, nrows)
-  if (length(widths) != ncols) stop("The length of the widths argument must be equal to the number of columns", call. = FALSE)
-  if (length(heights) != nrows) stop("The length of the heights argument is ", length(heights), ", but the number of rows is ", nrows, call. = FALSE)
-  if (any(widths < 0) || any(heights < 0)) stop("The widths and heights arguments must contain positive values", call. = FALSE)
-  if (sum(widths) > 1 + sqrt(.Machine$double.eps) || sum(heights) > 1 + sqrt(.Machine$double.eps)) {
-    stop("The sum of the widths and heights arguments must be less than 1", call. = FALSE)
+  widths <- widths %||% rep(1 / ncols, ncols)
+  heights <- heights %||% rep(1 / nrows, nrows)
+  if (length(widths) != ncols) {
+    stop("The length of the widths argument must be equal ",
+         "to the number of columns", call. = FALSE)
   }
+  if (length(heights) != nrows) {
+    stop("The length of the heights argument is ", length(heights),
+         ", but the number of rows is ", nrows, call. = FALSE)
+  }
+  if (any(widths < 0) | any(heights < 0)) {
+    stop("The widths and heights arguments must contain positive values")
+  }
+  if (sum(widths) > (1 + sqrt(.Machine$double.eps)) | sum(heights) > (1 + sqrt(.Machine$double.eps))) {
+    stop("The sum of the widths and heights arguments must be less than 1")
+  }
+  
   widths <- cumsum(c(0, widths))
   heights <- cumsum(c(0, heights))
+  # 'center' these values if there is still room left 
   widths <- widths + (1 - max(widths)) / 2
   heights <- heights + (1 - max(heights)) / 2
-  xs <- lapply(seq_len(ncols), function(i) c(xstart = widths[i] + if (i == 1) 0 else margins[1],
-                                            xend = widths[i + 1] - if (i == ncols) 0 else margins[2]))
+  
+  xs <- vector("list", ncols)
+  for (i in seq_len(ncols)) {
+    xs[[i]] <- c(
+      xstart = widths[i] + if (i == 1) 0 else margins[1],
+      xend = widths[i + 1] - if (i == ncols) 0 else margins[2]
+    )
+  }
   xz <- rep_len(xs, nplots)
-  ys <- lapply(seq_len(nplots), function(i) {
+  
+  ys <- vector("list", nrows)
+  for (i in seq_len(nplots)) {
     j <- ceiling(i / ncols)
-    c(ystart = 1 - heights[j] - if (j == 1) 0 else margins[3], yend = 1 - heights[j + 1] + if (j == nrows) 0 else margins[4])
-  })
-  as.data.frame(do.call(rbind, Map(c, xz, ys)))
+    ys[[i]] <- c(
+      ystart = 1 - (heights[j]) - if (j == 1) 0 else margins[3],
+      yend = 1 - (heights[j + 1]) + if (j == nrows) 0 else margins[4]
+    )
+  }
+  list2df(Map(c, xz, ys))
 }
 
+list2df <- function(x, nms) {
+  #stopifnot(length(unique(sapply(x, length))) == 1)
+  m <- if (length(x) == 1) t(x[[1]]) else do.call(rbind, x)
+  row.names(m) <- NULL
+  df <- data.frame(m)
+  if (!missing(nms)) setNames(df, nms) else df
+}
+
+# translate x/y positions according to domain objects 
+# (useful mostly for repositioning annotations/shapes in subplots)
 reposition <- function(obj, domains) {
-  xd <- as.numeric(domains[c("xstart", "xend")])
-  yd <- as.numeric(domains[c("yend", "ystart")])
+  # we need x and y in order to rescale them!
+  xdom <- as.numeric(domains[c("xstart", "xend")])
+  ydom <- as.numeric(domains[c("yend", "ystart")])
+  
   for (i in seq_along(obj)) {
     o <- obj[[i]]
     xs <- if (identical(o$xref, "paper")) {
-      if (is.numeric(o$sizex)) obj[[i]]$sizex <- o$sizex * abs(diff(xd))
+      if (is.numeric(o$sizex)) obj[[i]]$sizex <- o$sizex * abs(diff(xdom))
       if (identical(o$xsizemode, "pixel")) "xanchor" else c("x", "x0", "x1")
     }
-    for (j in xs) if (is.numeric(o[[j]])) obj[[i]][[j]] <- rescale(o[[j]], xd, from = c(0, 1))
+    for (j in xs) {
+      if (is.numeric(o[[j]])) {
+        obj[[i]][[j]] <- scales::rescale(o[[j]], xdom, from = c(0, 1))
+      }
+    }
     ys <- if (identical(o$yref, "paper")) {
-      if (is.numeric(o$sizey)) obj[[i]]$sizey <- o$sizey * abs(diff(yd))
+      if (is.numeric(o$sizey)) obj[[i]]$sizey <- o$sizey * abs(diff(ydom))
       if (identical(o$ysizemode, "pixel")) "yanchor" else c("y", "y0", "y1")
     }
-    for (j in ys) if (is.numeric(o[[j]])) obj[[i]][[j]] <- rescale(o[[j]], yd, from = c(0, 1))
+    for (j in ys) {
+      if (is.numeric(o[[j]])) {
+        obj[[i]][[j]] <- scales::rescale(o[[j]], ydom, from = c(0, 1))
+      }
+    }
   }
   obj
 }
 
-# Re-assign colorway colors (marked by the build step) after combining plots.
-colorway_retrain <- function(traces, colorway) {
+
+colorway_retrain <- function(traces, colorway = colorway()) {
+  colorway <- rep(colorway, length.out = length(traces))
   for (i in seq_along(traces)) {
-    col <- colorway[[i]]
-    retrain <- function(x) {
-      if (inherits(x, "colorway")) {
-        alpha <- as.numeric(grDevices::col2rgb(rgb2hex(x), alpha = TRUE)["alpha", ] / 255)
-        prefix_class(default(toRGB(col, alpha)), "colorway")
-      } else if (is.list(x) && !is.data.frame(x)) {
-        cls <- oldClass(x)
-        x <- lapply(x, retrain)
-        oldClass(x) <- cls
-        x
-      } else x
-    }
-    traces[[i]] <- retrain(traces[[i]])
+    col <- prefix_class(default(colorway[[i]]), "colorway")
+    traces[[i]] <- rapply(traces[[i]], function(x) { if (inherits(x, "colorway")) alpha_inherit(col, x) else x }, how = "replace")
   }
-  traces
+  traces 
 }
 
+
+# retrieve the alpha of an 'old' color code and apply it to a new color code
+alpha_inherit <- function(new, old) {
+  # should return the alpha in a rgba() code
+  alphas <- as.numeric(col2rgb(rgb2hex(old), alpha = TRUE)["alpha", ] / 255)
+  prefix_class(default(toRGB(new, alphas)), "colorway")
+}

@@ -2,26 +2,28 @@
 % Please edit documentation in R/plotly_build.R
 \name{plotly_build}
 \alias{plotly_build}
-\title{Build a figure}
+\title{'Build' (i.e., evaluate) a plotly object}
 \usage{
 plotly_build(p, registerFrames = TRUE)
 }
 \arguments{
-\item{p}{A \code{\link[=plot_ly]{plot_ly()}} object or \code{\link[=go_figure]{go_figure()}}.}
+\item{p}{a ggplot object, or a plotly object, or a list.}
 
-\item{registerFrames}{Whether to register animation frames.}
-}
-\value{
-A built object.
+\item{registerFrames}{should a frame trace attribute be interpreted as frames in an animation?}
 }
 \description{
-For \code{\link[=plot_ly]{plot_ly()}} objects, evaluates the attribute mappings against the data
-and returns the object with the resulting traces in \code{p$x$data}, layout in
-\code{p$x$layout} and frames in \code{p$x$frames} (as the legacy plotly package
-does). For a \code{\link[=go_figure]{go_figure()}} it returns the htmlwidget that rendering
-would produce.
+This generic function creates the list object sent to plotly.js
+for rendering. Using this function can be useful for overriding defaults
+provided by \code{ggplotly}/\code{plot_ly} or for debugging rendering
+errors.
 }
 \examples{
-p <- mtcars |> plot_ly(x = ~wt, y = ~mpg, color = ~factor(cyl))
-length(plotly_build(p)$x$data)
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+p <- plot_ly(economics, x = ~date, y = ~pce)
+# the unevaluated plotly object
+str(p)
+# the evaluated data
+str(plotly_build(p)$x$data)
+\dontshow{\}) # examplesIf}
 }

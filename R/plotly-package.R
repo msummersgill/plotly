@@ -9,6 +9,7 @@
 #'
 #' @keywords internal
 #' @rawNamespace import(plotly.core, except = c(schema))
+#' @rawNamespace export(add_trace)
 #' @rawNamespace import(ggplot2, except = c(last_plot, set_last_plot))
 #' @evalNamespace sprintf("S3method(add_%s,plotly)", plotly.core::available_trace_types())
 "_PACKAGE"

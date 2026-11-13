@@ -2,30 +2,38 @@
 % Please edit documentation in R/toRGB.R
 \name{toRGB}
 \alias{toRGB}
-\alias{showRGB}
-\title{Convert colors to rgba() strings}
+\title{Convert R colours to RGBA hexadecimal colour values}
 \usage{
 toRGB(x, alpha = 1)
-
-showRGB(x, ...)
 }
 \arguments{
-\item{x}{A character vector of colors.}
+\item{x}{see the \code{col} argument in \code{col2rgb} for valid specifications}
 
-\item{alpha}{Opacity multiplier between 0 and 1 (length 1 or the length of
-\code{x}).}
-
-\item{...}{Unused.}
+\item{alpha}{alpha channel on 0-1 scale}
 }
 \value{
-\code{toRGB()} returns a character vector; \code{showRGB()} returns \code{x}
-invisibly.
+hexadecimal colour value (if is.na(x), return "transparent" for compatibility with Plotly)
 }
 \description{
-\code{toRGB()} converts R colors (names, hex codes or rgba() strings) to
-plotly.js \code{rgba()} strings, with an optional alpha (opacity) multiplier.
-\code{showRGB()} draws swatches of \code{rgba()} colors.
+Convert R colours to RGBA hexadecimal colour values
 }
 \examples{
-toRGB("steelblue", 0.5)
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+toRGB("steelblue") 
+# [1] "rgba(70,130,180,1)"
+
+m <- list(
+  color = toRGB("red"),
+  line = list(
+    color = toRGB("black"), 
+    width = 19
+  )
+)
+
+plot_ly(x = 1, y = 1, marker = m)
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+\code{\link[=showRGB]{showRGB()}}
 }

@@ -1,45 +1,133 @@
-#' Create a plot with the plot_ly() interface
+#' Initiate a plotly visualization
 #'
-#' Compatibility with the legacy plotly R package: `plot_ly()` maps columns of
-#' `data` to plotly.js attributes using formulas (e.g. `x = ~wt`), and
-#' `add_trace()`/`add_markers()`/`add_lines()` and friends add traces. The
-#' mappings are evaluated when the plot is built or printed. `color`,
-#' `stroke`, `size`, `span`, `symbol` and `linetype` map data to visual
-#' properties, splitting discrete values into separate traces; wrap a value
-#' in [I()] to use it as is (e.g. `color = I("red")`).
+#' This function maps R objects to [plotly.js](https://plotly.com/javascript/),
+#' an (MIT licensed) web-based interactive charting library. It provides 
+#' abstractions for doing common things (e.g. mapping data values to 
+#' fill colors (via `color`) or creating [animation]s (via `frame`)) and sets
+#' some different defaults to make the interface feel more 'R-like' 
+#' (i.e., closer to [plot()] and [ggplot2::qplot()]). 
 #'
-#' Plots are rendered without a template, as with the legacy package (use
-#' `layout(p, template = "plotly")` for one). Use [as_widget()] or
-#' [legacy_figure()] to convert to a widget or a [go_figure()].
+#' @details Unless `type` is specified, this function just initiates a plotly 
+#' object with 'global' attributes that are passed onto downstream uses of
+#' [add_trace()] (or similar). A [formula] must always be used when 
+#' referencing column name(s) in `data` (e.g. `plot_ly(mtcars, x = ~wt)`).
+#' Formulas are optional when supplying values directly, but they do
+#' help inform default axis/scale titles
+#' (e.g., `plot_ly(x = mtcars$wt)` vs `plot_ly(x = ~mtcars$wt)`)
 #'
-#' @param data A data frame (optional).
-#' @param ... Attributes (see <https://plotly.com/r/reference/>), as values or
-#'   formulas referencing `data`.
-#' @param type The trace type (e.g. `"scatter"`, `"bar"`). Inferred from the
-#'   data if missing.
-#' @param name Trace name (legend entry).
-#' @param color,stroke Values mapped to fill and stroke color.
-#' @param colors,strokes Colors to use: a color vector, an RColorBrewer or
-#'   viridis palette name, or a named vector for discrete values.
-#' @param alpha,alpha_stroke Opacity of fill and stroke colors (0-1).
-#' @param size,span Values mapped to fill size and stroke width.
-#' @param sizes,spans Range of sizes/widths to map to.
-#' @param symbol,linetype Values mapped to marker symbols and line types.
-#' @param symbols,linetypes Symbols (plotly.js names or `pch` values) and line
-#'   types (plotly.js names or `lty` values) to use.
-#' @param split Values defining separate traces.
-#' @param frame Values defining animation frames.
-#' @param width,height Size of the plot in pixels.
-#' @param source Identifier of the plot for [event_data()].
-#' @return A plotly htmlwidget object.
-#' @seealso [add_trace()], [layout()], [subplot()], [plotly_build()]
+#' @param data A data frame (optional) or [crosstalk::SharedData] object.
+#' @param ... Arguments (i.e., attributes) passed along to the trace `type`.
+#' See [schema()] for a list of acceptable attributes for a given trace `type`
+#' (by going to `traces` -> `type` -> `attributes`). Note that attributes
+#' provided at this level may override other arguments 
+#' (e.g. `plot_ly(x = 1:10, y = 1:10, color = I("red"), marker = list(color = "blue"))`).
+#' @param type A character string specifying the trace type (e.g. `"scatter"`, `"bar"`, `"box"`, etc).
+#' If specified, it *always* creates a trace. Otherwise, a trace type is
+#' inferred from the supplied arguments when the plot is built.
+#' @param name Values mapped to the trace's name attribute. Since a trace can 
+#' only have one name, this argument acts very much like `split` in that it 
+#' creates one trace for every unique value.
+#' @param color Values mapped to relevant 'fill-color' attribute(s) 
+#' (e.g. [fillcolor](https://plotly.com/r/reference/#scatter-fillcolor), 
+#' [marker.color](https://plotly.com/r/reference/#scatter-marker-color), 
+#' [textfont.color](https://plotly.com/r/reference/#scatter-textfont-color), etc.).
+#' The mapping from data values to color codes may be controlled using
+#' `colors` and `alpha`, or avoided altogether via [I()] (e.g., `color = I("red")`). 
+#' Any color understood by [grDevices::col2rgb()] may be used in this way. 
+#' @param colors Either a colorbrewer2.org palette name (e.g. "YlOrRd" or "Blues"), 
+#' or a vector of colors to interpolate in hexadecimal "#RRGGBB" format, 
+#' or a color interpolation function like `colorRamp()`.
+#' @param stroke Similar to `color`, but values are mapped to relevant 'stroke-color' attribute(s)
+#' (e.g., [marker.line.color](https://plotly.com/r/reference/#scatter-marker-line-color)
+#'  and [line.color](https://plotly.com/r/reference/#scatter-line-color)
+#' for filled polygons). If not specified, `stroke` inherits from `color`.
+#' @param strokes Similar to `colors`, but controls the `stroke` mapping.
+#' @param alpha A number between 0 and 1 specifying the alpha channel applied to `color`.
+#' Defaults to 0.5 when mapping to [fillcolor](https://plotly.com/r/reference/#scatter-fillcolor) and 1 otherwise.
+#' @param alpha_stroke Similar to `alpha`, but applied to `stroke`.
+#' @param symbol (Discrete) values mapped to [marker.symbol](https://plotly.com/r/reference/#scatter-marker-symbol).
+#' The mapping from data values to symbols may be controlled using
+#' `symbols`, or avoided altogether via [I()] (e.g., `symbol = I("pentagon")`). 
+#' Any [pch] value or [symbol name](https://plotly.com/r/reference/#scatter-marker-symbol) may be used in this way.
+#' @param symbols A character vector of [pch] values or [symbol names](https://plotly.com/r/reference/#scatter-marker-symbol).
+#' @param linetype (Discrete) values mapped to [line.dash](https://plotly.com/r/reference/#scatter-line-dash).
+#' The mapping from data values to symbols may be controlled using
+#' `linetypes`, or avoided altogether via [I()] (e.g., `linetype = I("dash")`). 
+#' Any `lty` (see [par]) value or [dash name](https://plotly.com/r/reference/#scatter-line-dash) may be used in this way.
+#' @param linetypes A character vector of `lty` values or [dash names](https://plotly.com/r/reference/#scatter-line-dash)
+#' @param size (Numeric) values mapped to relevant 'fill-size' attribute(s) 
+#' (e.g., [marker.size](https://plotly.com/r/reference/#scatter-marker-size), 
+#' [textfont.size](https://plotly.com/r/reference/#scatter-textfont-size),
+#' and [error_x.width](https://plotly.com/r/reference/#scatter-error_x-width)).
+#' The mapping from data values to symbols may be controlled using
+#' `sizes`, or avoided altogether via [I()] (e.g., `size = I(30)`). 
+#' @param sizes A numeric vector of length 2 used to scale `size` to pixels.
+#' @param span (Numeric) values mapped to relevant 'stroke-size' attribute(s) 
+#' (e.g., 
+#' [marker.line.width](https://plotly.com/r/reference/#scatter-marker-line-width),
+#' [line.width](https://plotly.com/r/reference/#scatter-line-width) for filled polygons,
+#' and [error_x.thickness](https://plotly.com/r/reference/#scatter-error_x-thickness))
+#' The mapping from data values to symbols may be controlled using
+#' `spans`, or avoided altogether via [I()] (e.g., `span = I(30)`). 
+#' @param spans A numeric vector of length 2 used to scale `span` to pixels.
+#' @param split (Discrete) values used to create multiple traces (one trace per value).
+#' @param frame (Discrete) values used to create animation frames.
+#' @param width	Width in pixels (optional, defaults to automatic sizing).
+#' @param height Height in pixels (optional, defaults to automatic sizing).
+#' @param source a character string of length 1. Match the value of this string 
+#' with the source argument in [event_data()] to retrieve the 
+#' event data corresponding to a specific plot (shiny apps can have multiple plots).
+#' @author Carson Sievert
+#' @references <https://plotly-r.com/overview.html>
+#' @seealso \itemize{
+#'  \item For initializing a plotly-geo object: [plot_geo()]
+#'  \item For initializing a plotly-mapbox object: [plot_mapbox()]
+#'  \item For translating a ggplot2 object to a plotly object: [ggplotly()]
+#'  \item For modifying any plotly object: [layout()], [add_trace()], [style()]
+#'  \item For linked brushing: [highlight()]
+#'  \item For arranging multiple plots: [subplot()], [crosstalk::bscols()]
+#'  \item For inspecting plotly objects: [plotly_json()]
+#'  \item For quick, accurate, and searchable plotly.js reference: [schema()]
+#' }
 #' @export
-#' @examples
-#' mtcars |> plot_ly(x = ~wt, y = ~mpg, color = ~factor(cyl), size = ~hp) |>
-#'   layout(title = "Motor Trend cars")
-#' data.frame(t = 1:20, v = cumsum(rnorm(20))) |>
-#'   plot_ly(x = ~t, y = ~v) |>
-#'   add_lines()
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' \dontrun{
+#' 
+#' # plot_ly() tries to create a sensible plot based on the information you 
+#' # give it. If you don't provide a trace type, plot_ly() will infer one.
+#' plot_ly(economics, x = ~pop)
+#' plot_ly(economics, x = ~date, y = ~pop)
+#' # plot_ly() doesn't require data frame(s), which allows one to take 
+#' # advantage of trace type(s) designed specifically for numeric matrices
+#' plot_ly(z = ~volcano)
+#' plot_ly(z = ~volcano, type = "surface")
+#' 
+#' # plotly has a functional interface: every plotly function takes a plotly
+#' # object as it's first input argument and returns a modified plotly object
+#' add_lines(plot_ly(economics, x = ~date, y = ~unemploy/pop))
+#' 
+#' # To make code more readable, plotly imports the pipe operator from magrittr
+#' economics %>% plot_ly(x = ~date, y = ~unemploy/pop) %>% add_lines()
+#' 
+#' # Attributes defined via plot_ly() set 'global' attributes that 
+#' # are carried onto subsequent traces, but those may be over-written
+#' plot_ly(economics, x = ~date, color = I("black")) %>%
+#'  add_lines(y = ~uempmed) %>%
+#'  add_lines(y = ~psavert, color = I("red"))
+#' 
+#' # Attributes are documented in the figure reference -> https://plotly.com/r/reference
+#' # You might notice plot_ly() has named arguments that aren't in this figure
+#' # reference. These arguments make it easier to map abstract data values to
+#' # visual attributes.
+#' p <- plot_ly(palmerpenguins::penguins, x = ~bill_length_mm, y = ~body_mass_g)
+#' add_markers(p, color = ~bill_depth_mm, size = ~bill_depth_mm)
+#' add_markers(p, color = ~species)
+#' add_markers(p, color = ~species, colors = "Set1")
+#' add_markers(p, symbol = ~species)
+#' add_paths(p, linetype = ~species)
+#' 
+#' }
+#' 
 plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors = NULL, alpha = NULL,
                     stroke, strokes = NULL, alpha_stroke = 1, size, sizes = c(10, 100), span, spans = c(1, 20),
                     symbol, symbols = NULL, linetype, linetypes = NULL, split, frame,
@@ -99,11 +187,37 @@ legacy_widget_lazy <- function(x) {
 }
 
 
-#' @rdname plot_ly
-#' @details `plot_mapbox()` creates tile maps; since plotly.js 3 removed the
-#'   Mapbox-based traces, it uses the MapLibre-based `scattermap` and
-#'   `choroplethmap` traces (no access token is needed).
+#' Initiate a plotly-mapbox object
+#' 
+#' Use this function instead of [plot_ly()] to initialize
+#' a plotly-mapbox object. This enforces the entire plot so use
+#' the scattermapbox trace type, and enables higher level geometries
+#' like [add_polygons()] to work
+#' 
+#' @param data A data frame (optional).
+#' @param ... arguments passed along to [plot_ly()]. They should be
+#' valid scattermapbox attributes - \url{https://plotly.com/r/reference/#scattermapbox}.
+#' Note that x/y can also be used in place of lat/lon.
 #' @export
+#' @author Carson Sievert
+#' @seealso [plot_ly()], [plot_geo()], [ggplotly()] 
+#' 
+#' @examples \dontrun{
+#' 
+#' plot_mapbox(res_mn)
+#' plot_mapbox(res_mn, color = ~INDRESNAME)
+#' 
+#' map_data("world", "canada") %>%
+#'   group_by(group) %>%
+#'   plot_mapbox(x = ~long, y = ~lat) %>%
+#'   add_polygons() %>%
+#'   layout(
+#'     mapbox = list(
+#'       center = list(lat = ~median(lat), lon = ~median(long))
+#'     )
+#'   )
+#' }
+#' 
 plot_mapbox <- function(data = data.frame(), ...) {
   p <- plot_ly(data, ...)
   p$x$layout$mapType <- "map"
@@ -146,6 +260,7 @@ add_method <- function(type) {
 for (.type in plotly.core::available_trace_types()) {
   assign(paste0("add_", .type, ".plotly"), add_method(.type))
 }
+
 rm(.type)
 
 legacy_add_dispatch <- function(type, p, dots) {
@@ -219,10 +334,6 @@ animation_format <- function(frame, transition, easing, redraw, mode) {
   match.arg(as.character(easing), LP_EASINGS)
   match.arg(as.character(mode), c("immediate", "next", "afterall"))
   list(transition = list(duration = transition, easing = easing), frame = list(duration = frame, redraw = redraw), mode = mode)
-}
-
-animation_defaults <- function() {
-  animation_format(default(500), default(500), default("linear"), default(TRUE), default("immediate"))
 }
 
 # Remove the build step's internal classes (defaults, colorway markers, trace
@@ -313,21 +424,55 @@ as_widget.gg <- function(x, ...) as_widget(ggplotly(x), ...)
 #' @export
 as_widget.ggmatrix <- function(x, ...) as_widget(ggplotly(x), ...)
 
-#' @rdname plot_ly
-#' @param offline Unused (kept for compatibility).
+#' Initiate a plotly-geo object
+#' 
+#' Use this function instead of [plot_ly()] to initialize
+#' a plotly-geo object. This enforces the entire plot so use
+#' the scattergeo trace type, and enables higher level geometries
+#' like [add_polygons()] to work
+#' 
+#' @param data A data frame (optional).
+#' @param ... arguments passed along to [plot_ly()].
+#' @param offline whether or not to include geo assets so that the map
+#' can be viewed with or without an internet connection. The plotlyGeoAssets
+#' package is required for this functionality.
 #' @export
+#' @author Carson Sievert
+#' @seealso [plot_ly()], [plot_mapbox()], [ggplotly()] 
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' map_data("world", "canada") %>%
+#'   group_by(group) %>%
+#'   plot_geo(x = ~long, y = ~lat) %>%
+#'   add_markers(size = I(1))
+#' 
 plot_geo <- function(data = data.frame(), ..., offline = FALSE) {
   p <- plot_ly(data, ...)
+  
+  if (isTRUE(offline)) {
+    if (!is_installed("plotlyGeoAssets")) {
+      stop(
+        "The plotlyGeoAssets package is required to make 'offline' maps. ",
+        "Please install and try again.",
+        call. = FALSE
+      )
+    }
+    p$dependencies <- c(
+      list(plotlyGeoAssets::geo_assets()),
+      p$dependencies
+    )
+  }
+  # not only do we use this for is_geo(), but also setting the layout attr
+  # https://plotly.com/r/reference/#layout-geo
   p$x$layout$mapType <- "geo"
   geo2cartesian(p)
 }
 
-# lat/lon given to plot_geo()/plot_mapbox() also serve as x/y, so add_*()
-# functions inherit them (as in the legacy package)
+# rename attrs (unevaluated arguments) from geo locations (lat/lon) to cartesian
 geo2cartesian <- function(p) {
   p$x$attrs <- lapply(p$x$attrs, function(tr) {
-    tr[["x"]] <- tr[["x"]] %||l% tr[["lat"]]
-    tr[["y"]] <- tr[["y"]] %||l% tr[["lon"]]
+    tr[["x"]] <- tr[["x"]] %||% tr[["lat"]]
+    tr[["y"]] <- tr[["y"]] %||% tr[["lon"]]
     tr
   })
   p
@@ -435,9 +580,29 @@ get_xy <- function(node) {
   tibble::as_tibble(m)
 }
 
-
-#' @rdname plotly-deprecated
+#' Remove TypedArray polyfill
+#'
+#' By default, plotly.js' TypedArray polyfill is included as a dependency, so
+#' printing "just works" in any context. Many users won't need this polyfill,
+#' so this function may be used to remove it and thus reduce the size of the page. 
+#' 
+#' @details The polyfill seems to be only relevant for those rendering plots 
+#' via phantomjs and RStudio on some Windows platforms.
+#'
+#' @param p a plotly object
 #' @export
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' \dontrun{
+#' p1 <- plot_ly()
+#' p2 <- remove_typedarray_polyfill(p1)
+#' t1 <- tempfile(fileext = ".html")
+#' htmlwidgets::saveWidget(p1, t1)
+#' file.info(t1)$size
+#' htmlwidgets::saveWidget(p2, t1)
+#' file.info(t1)$size
+#' }
+
 remove_typedarray_polyfill <- function(p) {
   deprecated("remove_typedarray_polyfill", "there is no polyfill to remove; the plot is returned unchanged.")
   p

@@ -45,5 +45,20 @@ In this case, one should also take care to make sure
 is set to \code{FALSE}.
 }
 \examples{
-data.frame(g = c(1, 1, 2, 2), x = 1:4) |> group2NA("g")
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+# note the insertion of new rows with missing values 
+group2NA(mtcars, "vs", "cyl")
+
+# need to group lines by city somehow!
+plot_ly(txhousing, x = ~date, y = ~median) \%>\% add_lines()
+
+# instead of using group_by(), you could use group2NA()
+tx <- group2NA(txhousing, "city")
+plot_ly(tx, x = ~date, y = ~median) \%>\% add_lines()
+
+# add_lines() will ensure paths are sorted by x, but this is equivalent
+tx <- group2NA(txhousing, "city", ordered = "date")
+plot_ly(tx, x = ~date, y = ~median) \%>\% add_paths()
+\dontshow{\}) # examplesIf}
 }

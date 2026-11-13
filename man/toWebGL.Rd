@@ -2,17 +2,21 @@
 % Please edit documentation in R/helpers.R
 \name{toWebGL}
 \alias{toWebGL}
-\title{Convert traces to WebGL versions}
+\title{Convert trace types to WebGL}
 \usage{
 toWebGL(p)
 }
 \arguments{
-\item{p}{A \code{\link[=plot_ly]{plot_ly()}} object.}
-}
-\value{
-The modified plot.
+\item{p}{a plotly or ggplot object.}
 }
 \description{
-Uses WebGL-based trace types (e.g. \code{scattergl}) where available, for
-faster rendering of large data.
+Convert trace types to WebGL
+}
+\examples{
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+# currently no bargl trace type
+toWebGL(ggplot() + geom_bar(aes(1:10)))
+toWebGL(qplot(1:10, 1:10))
+\dontshow{\}) # examplesIf}
 }

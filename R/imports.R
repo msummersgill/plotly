@@ -175,8 +175,6 @@ dplyr::filter_
 # Functions of plotly 4.x that plotly.core now provides --------------------------------
 
 #' @export
-plotly.core::add_trace
-#' @export
 plotly.core::add_choropleth
 #' @export
 plotly.core::add_contour
@@ -226,3 +224,18 @@ plotly.core::renderPlotly
 plotly.core::save_image
 #' @export
 plotly.core::TeX
+
+
+# waiting on https://github.com/tidyverse/tidyr/pull/229
+#
+# #' @importFrom tidyr gather
+# #' @name gather
+# #' @rdname reexports
+# #' @export
+# tidyr::gather
+# 
+# #' @importFrom tidyr gather_
+# #' @name gather_
+# #' @rdname reexports
+# #' @export
+# tidyr::gather_

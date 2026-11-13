@@ -8,68 +8,87 @@ require_crosstalk <- function() {
   }
 }
 
-# SharedData -> its data with the key column and a "set" attribute (the
-# crosstalk group).
-shared_data <- function(dat) {
-  if (!is_shared(dat)) return(dat)
-  key <- dat$key()
-  set <- dat$groupName()
-  d <- dat$origData()
-  if (data.table::is.data.table(d)) {
-    d <- data.table::copy(d)
-    data.table::set(d, j = LP_CT_KEY, value = key)
-  } else {
-    d[[LP_CT_KEY]] <- key
-  }
-  attr(d, "set") <- set
-  d
-}
-
-#' Linked highlighting (brushing) across plots
-#'
-#' Sets how selections are made and shown in plots whose data is a
-#' [highlight_key()] (a [crosstalk::SharedData] object). Selecting marks in
-#' one plot highlights the observations with the same keys in every plot (and
-#' other crosstalk-compatible htmlwidgets) sharing the data's group, without
-#' a Shiny server. Holding the shift key while selecting adds to the current
-#' selection. Requires the crosstalk package.
-#'
-#' @param p A [plot_ly()] object.
-#' @param on Event that selects: `"plotly_click"`, `"plotly_hover"`,
-#'   `"plotly_selected"` (box or lasso selection) or `"plotly_selecting"`
-#'   (while selecting). `NULL` disables selecting from the plot.
-#' @param off Event that clears the selection: `"plotly_doubleclick"`,
-#'   `"plotly_deselect"` or `"plotly_relayout"`. Default: the one matching
-#'   `on`. `NULL` disables it.
-#' @param persistent Accumulate selections instead of replacing them (the
-#'   shift key does this temporarily)?
-#' @param dynamic Add a colour picker for the selection colour?
-#' @param color Selection colour(s), or `NULL` to keep the marks' colours.
-#'   Several colours are offered by the picker when `dynamic = TRUE`.
-#' @param selectize Add a selectize.js dropdown for choosing keys (labelled
-#'   with the `group` of [highlight_key()])? A list of selectize.js options may
-#'   be given instead of `TRUE`.
-#' @param defaultValues Keys selected when the plot is shown.
-#' @param opacityDim Multiplier (0 to 1) for the opacity of unselected traces.
-#' @param selected Attributes of the selection traces, see
-#'   [attrs_selected()].
-#' @param debounce Milliseconds to wait before selecting (useful with
-#'   `on = "plotly_hover"`).
-#' @param ... Not supported.
-#' @return The plot.
-#' @seealso [highlight_key()], [crosstalk::bscols()] to arrange linked views.
+#' Query graphical elements in multiple linked views
+#' 
+#' This function sets a variety of options for brushing (i.e., highlighting)
+#' multiple plots. These options are primarily designed for linking
+#' multiple plotly graphs, and may not behave as expected when linking 
+#' plotly to another htmlwidget package via crosstalk. In some cases,
+#' other htmlwidgets will respect these options, such as persistent selection
+#' in leaflet (see `demo("highlight-leaflet", package = "plotly")`).
+#' 
+#' @param p a plotly visualization.
+#' @param on turn on a selection on which event(s)? To disable on events 
+#' altogether, use `NULL`. Currently the following are supported:
+#' \itemize{
+#'  \item `'plotly_click'`
+#'  \item `'plotly_hover'`
+#'  \item `'plotly_selected'`: triggered through rectangular 
+#'  (layout.dragmode = 'select') or lasso (layout.dragmode = 'lasso') brush.
+#' }
+#' @param off turn off a selection on which event(s)? To disable off 
+#' events altogether, use `NULL`. Currently the following are supported:
+#' \itemize{
+#'  \item `'plotly_doubleclick'`: triggered on a double mouse click while
+#'  (layout.dragmode = 'zoom') or (layout.dragmode = 'pan')
+#'  \item `'plotly_deselect'`: triggered on a double mouse click while 
+#'  (layout.dragmode = 'select') or (layout.dragmode = 'lasso')
+#'  \item `'plotly_relayout'`: triggered whenever axes are rescaled 
+#'  (i.e., clicking the home button in the modebar) or whenever the height/width
+#'  of the plot changes.
+#' }
+#' @param persistent should selections persist (i.e., accumulate)? We often
+#' refer to the default (`FALSE`) as a 'transient' selection mode; 
+#' which is recommended, because one may switch from 'transient' to 
+#' 'persistent' selection by holding the shift key.
+#' @param dynamic should a widget for changing selection colors be included? 
+#' @param color character string of color(s) to use for 
+#' highlighting selections. See [toRGB()] for valid color
+#' specifications. If `NULL` (the default), the color of selected marks
+#' are not altered.
+#' @param selectize whether or not to render a selectize.js widget for selecting
+#'   [highlight_key()] values. A list of additional selectize.js options may
+#'   also be provided. The label used for this widget should be set via the
+#'   `groupName` argument of [highlight_key()].
+#' @param defaultValues a vector of values for setting a "default selection".
+#' These values should match the key attribute.
+#' @param opacityDim a number between 0 and 1 used to reduce the
+#' opacity of non-selected traces (by multiplying with the existing opacity).
+#' @param selected attributes of the selection, see [attrs_selected()].
+#' @param debounce amount of time to wait before firing an event (in milliseconds).
+#' The default of 0 means do not debounce at all. 
+#' Debouncing is mainly useful when `on = "plotly_hover"` to avoid firing too many events
+#' when users clickly move the mouse over relevant graphical marks.
+#' @param ... currently not supported.
 #' @export
-#' @examplesIf requireNamespace("crosstalk", quietly = TRUE)
-#' d <- mtcars |> highlight_key(~cyl)
-#' p <- d |> plot_ly(x = ~wt, y = ~mpg) |> add_markers()
-#' highlight(p, on = "plotly_selected", color = "red")
-#'
-#' # two linked views of the same data
-#' s <- highlight_key(data.frame(x = 1:10, y = (1:10)^2, g = rep(c("a", "b"), 5)))
-#' subplot(
-#'   s |> plot_ly(x = ~x, y = ~y) |> add_markers(),
-#'   s |> plot_ly(x = ~g) |> add_histogram()
-#' ) |> highlight(on = "plotly_selected", dynamic = TRUE)
+#' @author Carson Sievert
+#' @references \url{https://plotly-r.com/client-side-linking.html}
+#' @seealso [attrs_selected()]
+#' @examplesIf interactive()
+#' 
+#' # These examples are designed to show you how to highlight/brush a *single*
+#' # view. For examples of multiple linked views, see `demo(package = "plotly")` 
+#' 
+#' d <- highlight_key(txhousing, ~city)
+#' p <- ggplot(d, aes(date, median, group = city)) + geom_line()
+#' gg <- ggplotly(p, tooltip = "city") 
+#' highlight(gg, dynamic = TRUE)
+#' 
+#' # supply custom colors to the brush 
+#' cols <- toRGB(RColorBrewer::brewer.pal(3, "Dark2"), 0.5)
+#' highlight(gg, on = "plotly_hover", color = cols, dynamic = TRUE)
+#' 
+#' # Use attrs_selected() for complete control over the selection appearance
+#' # note any relevant colors you specify here should override the color argument
+#' s <- attrs_selected(
+#'   showlegend = TRUE,
+#'   mode = "lines+markers",
+#'   marker = list(symbol = "x")
+#' )
+#' 
+#' highlight(layout(gg, showlegend = TRUE), selected = s)
+#' 
+
 highlight <- function(p, on = "plotly_click", off, persistent = getOption("persistent", FALSE),
                       dynamic = FALSE, color = NULL, selectize = FALSE, defaultValues = NULL,
                       opacityDim = getOption("opacityDim", 0.2), selected = attrs_selected(),
@@ -118,21 +137,31 @@ highlight_off <- function(on) {
   )
 }
 
-#' Attributes of selection traces
-#'
-#' Selected observations are drawn as new traces on top of the original ones;
-#' these attributes are applied to them (see [highlight()]).
-#'
-#' @param opacity Opacity (0 to 1) of the selection traces.
-#' @param ... Other trace attributes for the selection traces (e.g.
-#'   `mode = "lines+markers"`, `showlegend = TRUE`).
-#' @return A list of attributes.
+#' Specify attributes of selection traces
+#' 
+#' By default the name of the selection trace derives from the selected values.
+#' 
+#' 
+#' @param opacity a number between 0 and 1 specifying the overall opacity of
+#' the selected trace
+#' @param ... other trace attributes attached to the selection trace.
 #' @export
-#' @examples
-#' attrs_selected(showlegend = TRUE, marker = list(symbol = "x"))
+#' @author Carson Sievert
+
 attrs_selected <- function(opacity = 1, ...) {
-  if (opacity < 0 || 1 < opacity) stop("opacity must be between 0 and 1", call. = FALSE)
-  c(list(...), list(opacity = opacity))
+  if (opacity < 0 || 1 < opacity) {
+    stop("opacity must be between 0 and 1", call. = FALSE)
+  }
+  
+  args <- list(
+    opacity = opacity
+  )
+  
+  # TODO: verify attr names... maybe that should happen in the build step?
+  dots <- list(...)
+  
+  
+  c(dots, args)
 }
 
 # Build step: highlight defaults, crosstalk groups, selectize payloads and
@@ -227,5 +256,3 @@ highlight_defaults <- function() {
        dynamic = FALSE, selectize = FALSE, opacityDim = getOption("opacityDim", 0.2),
        selected = attrs_selected(), debounce = 0)
 }
-
-

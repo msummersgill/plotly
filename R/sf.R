@@ -42,8 +42,7 @@ sf_basic <- function(data) {
   }), kinds)
 }
 
-# Coordinates of identical geometries joined with the feature data. Lines
-# and polygons are grouped by the feature and ring ids (l1, l2, l3).
+# TODO: speed this up by avoiding conversion redundant features (e.g. animation)
 fortify_sf <- function(model) {
   coords <- sf::st_coordinates(sf::st_geometry(model))
   colnames(coords) <- tolower(colnames(coords))
@@ -75,6 +74,7 @@ fortify_sf <- function(model) {
   d
 }
 
+# the minimal set of attribute defaults
 sf_default_attrs <- function(d) {
   switch(attr(d, "sf_kind"),
     polygon = list(mode = "lines", fill = "toself"),
@@ -83,8 +83,6 @@ sf_default_attrs <- function(d) {
   )
 }
 
-# Build step: initial view from the sf layers' bounding boxes (map view,
-# geo lon/lat ranges, or equal-aspect cartesian axes without grids).
 fit_bounds <- function(p) {
   if (!any(vapply(p$x$data, function(tr) !is.null(tr[["_bbox"]]), logical(1)))) return(p)
   traces_on <- function(attr, id) lapply(p$x$data, function(tr) if (identical(id, tr[[attr]])) tr[["_bbox"]])
@@ -121,10 +119,19 @@ fit_bounds <- function(p) {
   p
 }
 
+# find the x/y layout range of a collection of trace._bboxes
 bboxes2range <- function(bboxes, ...) {
   if (sum(lengths(bboxes)) == 0) return(NULL)
-  get <- function(k) unlist(lapply(bboxes, `[[`, k))
-  list(yrng = grDevices::extendrange(range(get("ymin"), get("ymax"), na.rm = TRUE), ...),
-       xrng = grDevices::extendrange(range(get("xmin"), get("xmax"), na.rm = TRUE), ...))
+  yrng <- c(
+    min(unlist(lapply(bboxes, "[[", "ymin")), na.rm = TRUE),
+    max(unlist(lapply(bboxes, "[[", "ymax")), na.rm = TRUE)
+  )
+  xrng <- c(
+    min(unlist(lapply(bboxes, "[[", "xmin")), na.rm = TRUE),
+    max(unlist(lapply(bboxes, "[[", "xmax")), na.rm = TRUE)
+  )
+  list(
+    yrng = grDevices::extendrange(yrng, ...),
+    xrng = grDevices::extendrange(xrng, ...)
+  )
 }
-

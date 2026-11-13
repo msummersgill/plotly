@@ -2,23 +2,19 @@
 % Please edit documentation in R/highlight.R
 \name{attrs_selected}
 \alias{attrs_selected}
-\title{Attributes of selection traces}
+\title{Specify attributes of selection traces}
 \usage{
 attrs_selected(opacity = 1, ...)
 }
 \arguments{
-\item{opacity}{Opacity (0 to 1) of the selection traces.}
+\item{opacity}{a number between 0 and 1 specifying the overall opacity of
+the selected trace}
 
-\item{...}{Other trace attributes for the selection traces (e.g.
-\code{mode = "lines+markers"}, \code{showlegend = TRUE}).}
-}
-\value{
-A list of attributes.
+\item{...}{other trace attributes attached to the selection trace.}
 }
 \description{
-Selected observations are drawn as new traces on top of the original ones;
-these attributes are applied to them (see \code{\link[=highlight]{highlight()}}).
+By default the name of the selection trace derives from the selected values.
 }
-\examples{
-attrs_selected(showlegend = TRUE, marker = list(symbol = "x"))
+\author{
+Carson Sievert
 }

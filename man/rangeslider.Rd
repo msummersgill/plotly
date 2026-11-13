@@ -2,20 +2,41 @@
 % Please edit documentation in R/layout.R
 \name{rangeslider}
 \alias{rangeslider}
-\title{Add a range slider to the x axis}
+\title{Add a range slider to the x-axis}
 \usage{
 rangeslider(p, start = NULL, end = NULL, ...)
 }
 \arguments{
-\item{p}{A \code{\link[=plot_ly]{plot_ly()}} object or \code{\link[=go_figure]{go_figure()}}.}
+\item{p}{plotly object.}
 
-\item{start, end}{Initial range (numbers, Dates or date-times).}
+\item{start}{a start date/value.}
 
-\item{...}{Range slider attributes.}
-}
-\value{
-The modified plot.
+\item{end}{an end date/value.}
+
+\item{...}{these arguments are documented here
+\url{https://plotly.com/r/reference/#layout-xaxis-rangeslider}}
 }
 \description{
-Add a range slider to the x axis
+Add a range slider to the x-axis
+}
+\examples{
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+
+plot_ly(x = time(USAccDeaths), y = USAccDeaths) \%>\% 
+  add_lines() \%>\%
+  rangeslider()
+  
+d <- tibble::tibble(
+  time = seq(as.Date("2016-01-01"), as.Date("2016-08-31"), by = "days"),
+  y = rnorm(seq_along(time))
+ )
+ 
+plot_ly(d, x = ~time, y = ~y) \%>\%
+  add_lines() \%>\%
+  rangeslider(d$time[5], d$time[50])
+  
+\dontshow{\}) # examplesIf}
+}
+\author{
+Carson Sievert
 }

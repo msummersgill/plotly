@@ -2,33 +2,27 @@
 % Please edit documentation in R/plotly_data.R
 \name{highlight_key}
 \alias{highlight_key}
-\title{Data with keys for linked highlighting}
+\title{Highlight/query data based on primary key}
 \usage{
 highlight_key(x, ...)
 }
 \arguments{
-\item{x}{A data frame, or a \code{\link[=plot_ly]{plot_ly()}} object (whose current data is
-replaced by a keyed version).}
+\item{x}{a plotly visualization or a \code{data.frame}.}
 
-\item{...}{Passed to \code{crosstalk::SharedData$new()}: notably \code{key} (a
-formula or character vector; default: row names) and \code{group} (the link
-group name, also the selectize dropdown's label).}
+\item{...}{arguments passed to \code{crosstalk::SharedData$new()}}
 }
 \value{
-A \link[crosstalk:SharedData]{crosstalk::SharedData} object, or the plot.
+An object of class \link[crosstalk:SharedData]{crosstalk::SharedData}
 }
 \description{
-Creates a \link[crosstalk:SharedData]{crosstalk::SharedData} object for use as \code{\link[=plot_ly]{plot_ly()}} data:
-plots (and other crosstalk-compatible htmlwidgets) made from data with the
-same \code{group} are linked, so selecting observations in one highlights them
-in the others (see \code{\link[=highlight]{highlight()}}). Requires the crosstalk package.
-}
-\examples{
-\dontshow{if (requireNamespace("crosstalk", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-d <- mtcars |> highlight_key(~cyl, group = "Cylinders")
-d |> plot_ly(x = ~wt, y = ~mpg) |> highlight(selectize = TRUE)
-\dontshow{\}) # examplesIf}
+This function simply creates an object of class \link[crosstalk:SharedData]{crosstalk::SharedData}.
+The reason it exists is to make it easier to teach others how to leverage
+its functionality in plotly. It also makes it more discoverable if one
+is already aware of \link{highlight}.
 }
 \seealso{
-\code{\link[=highlight]{highlight()}}
+\link{highlight}
+}
+\author{
+Carson Sievert
 }

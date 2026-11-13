@@ -1,5 +1,32 @@
-#' @rdname hide_legend
+#' Modify the colorbar
+#' 
+#' @param p a plotly object
+#' @param ... arguments are documented here 
+#' \url{https://plotly.com/r/reference/#scatter-marker-colorbar}.
+#' @param limits numeric vector of length 2. Set the extent of the colorbar scale.
+#' @param which colorbar to modify? Should only be relevant for subplots with 
+#' multiple colorbars.
+#' @author Carson Sievert
 #' @export
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' p <- plot_ly(mtcars, x = ~wt, y = ~mpg, color = ~cyl)
+#' 
+#' # pass any colorbar attribute -- 
+#' # https://plotly.com/r/reference/#scatter-marker-colorbar
+#' colorbar(p, len = 0.5)
+#' 
+#' # Expand the limits of the colorbar
+#' colorbar(p, limits = c(0, 20))
+#' # values outside the colorbar limits are considered "missing"
+#' colorbar(p, limits = c(5, 6))
+#' 
+#' # also works on colorbars generated via a z value
+#' corr <- cor(diamonds[vapply(diamonds, is.numeric, logical(1))])
+#' plot_ly(x = rownames(corr), y = colnames(corr), z = corr) %>%
+#'  add_heatmap() %>%
+#'  colorbar(limits = c(-1, 1))
+
 colorbar <- function(p, ..., limits = NULL, which = 1) {
   p <- plotly_build(p)
   is_bar <- vapply(p$x$data, is.colorbar, logical(1))
@@ -40,86 +67,127 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
 }
 
 
-#' @rdname hide_legend
+#' Hide guides (legends and colorbars)
+#'
+#' @param p a plotly object.
 #' @export
-hide_guides <- function(p) hide_legend(hide_colorbar(p))
+#' @seealso [hide_legend()], [hide_colorbar()]
+#'
+
+hide_guides <- function(p) {
+  hide_legend(hide_colorbar(p))
+}
 
 
-#' @rdname hide_legend
+#' Hide color bar(s)
+#' 
+#' @param p a plotly object.
 #' @export
+#' @seealso [hide_legend()]
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' p <- plot_ly(mtcars, x = ~wt, y = ~cyl, color = ~cyl)
+#' hide_colorbar(p)
+#'   
 hide_colorbar <- function(p) {
-  if (inherits(p, c("gg", "ggmatrix"))) p <- plotly_build(p)
-  if (inherits(p, "go_figure")) {
-    p <- for_each_trace(p, function(tr) {
-      if (has_attr(tr$type, "showscale")) tr$showscale <- FALSE
-      if (has_attr(tr$type, "marker.showscale")) tr$marker$showscale <- FALSE
-      tr
-    })
-    return(update_layout(p, coloraxis_showscale = FALSE))
-  }
   p <- plotly_build(p)
   for (i in seq_along(p$x$data)) {
-    type <- p$x$data[[i]]$type
-    if (has_attr(type, "showscale")) p$x$data[[i]]$showscale <- default(FALSE)
-    if (has_attr(type, "marker.showscale")) p$x$data[[i]]$marker$showscale <- default(FALSE)
+    trace <- p$x$data[[i]]
+    if (has_attr(trace$type, "showscale")) {
+      p$x$data[[i]]$showscale <- default(FALSE)
+    }
+    if (has_attr(trace$type, "marker")) {
+      p$x$data[[i]]$marker$showscale <- default(FALSE)
+    }
   }
   p
 }
 
-#' Show or hide guides
-#'
-#' `hide_legend()`, `hide_colorbar()` and `hide_guides()` hide the legend,
-#' colorbars or both; `colorbar()` modifies the colorbar of a [plot_ly()]
-#' object (with `limits` to clip the color range).
-#'
-#' @param p A [plot_ly()] object or [go_figure()].
-#' @param ... Colorbar attributes.
-#' @param limits Numeric range of the color mapping.
-#' @param which Which colorbar to modify.
-#' @return The modified plot.
+#' Hide legend
+#' 
+#' @param p a plotly object.
 #' @export
+#' @seealso [hide_colorbar()]
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' p <- plot_ly(mtcars, x = ~wt, y = ~cyl, color = ~factor(cyl))
+#' hide_legend(p)
+
 hide_legend <- function(p) {
-  if (inherits(p, "go_figure")) return(update_layout(p, showlegend = FALSE))
-  if (inherits(p, c("gg", "ggmatrix"))) p <- plotly_build(p)
+  if (ggplot2::is.ggplot(p)) {
+    p <- plotly_build(p)
+  }
   p$x$.hideLegend <- TRUE
   p
 }
 
-#' Convert traces to WebGL versions
-#'
-#' Uses WebGL-based trace types (e.g. `scattergl`) where available, for
-#' faster rendering of large data.
-#'
-#' @param p A [plot_ly()] object.
-#' @return The modified plot.
+#' Convert trace types to WebGL
+#' 
+#' @param p a plotly or ggplot object.
 #' @export
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' # currently no bargl trace type
+#' toWebGL(ggplot() + geom_bar(aes(1:10)))
+#' toWebGL(qplot(1:10, 1:10))
+#' 
 toWebGL <- function(p) {
-  if (inherits(p, c("gg", "ggmatrix"))) p <- plotly_build(p)
+  if (ggplot2::is.ggplot(p)) {
+    p <- plotly_build(p)
+  }
   p$x$.plotlyWebGl <- TRUE
   p
 }
 
 
-#' @rdname plot_ly
+#' Create a complete empty plotly graph.
+#' 
+#' Useful when used with [subplot()]
+#' 
+#' @param ... arguments passed onto [plot_ly()]
+#' 
 #' @export
 plotly_empty <- function(...) {
-  ax <- list(showticklabels = FALSE, showgrid = FALSE, zeroline = FALSE)
-  layout(plot_ly(...), xaxis = ax, yaxis = ax)
+  eaxis <- list(
+    showticklabels = FALSE,
+    showgrid = FALSE,
+    zeroline = FALSE
+  )
+  layout(plot_ly(...), xaxis = eaxis, yaxis = eaxis)
 }
 
 
-#' Encode a raster as a data URI
-#'
-#' Converts a raster (or matrix/array convertible with
-#' [grDevices::as.raster()]) to a PNG data URI, e.g. for layout images.
-#' Requires the png package.
-#'
-#' @param r A raster, matrix or array.
-#' @param ... Passed to [grDevices::as.raster()].
-#' @return A character string.
+#' Encode a raster object as a data URI
+#' 
+#' Encode a raster object as a data URI, which is suitable for 
+#' use with `layout()` \href{https://plotly.com/r/reference/#layout-images}{images}.
+#' This is especially convenient for embedding raster images on a plot in 
+#' a self-contained fashion (i.e., so they don't depend on external URL links).
+#' 
+#' @param r an object coercable to a raster object via [as.raster()]
+#' @param ... arguments passed onto [as.raster()].
+#' @author Carson Sievert
 #' @export
-#' @examples
-#' if (requireNamespace("png", quietly = TRUE)) substr(raster2uri(matrix(1:4 / 4, 2)), 1, 30)
+#' @references <https://plotly-r.com/embedding-images.html>
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' # a red gradient (from ?as.raster)
+#' r <- as.raster(matrix(hcl(0, 80, seq(50, 80, 10)), nrow = 4, ncol = 5))
+#' plot(r)
+#' 
+#' # embed the raster as an image
+#' plot_ly(x = 1, y = 1) %>% 
+#'   layout(
+#'     images = list(list(
+#'      source = raster2uri(r),
+#'      xref = "paper", 
+#'      yref = "paper", 
+#'      x = 0, y = 0, 
+#'      sizex = 0.5, sizey = 0.5, 
+#'      xanchor = "left", yanchor = "bottom"
+#'   ))
+#'  ) 
+
 raster2uri <- function(r, ...) {
   if (!requireNamespace("png", quietly = TRUE)) stop("raster2uri() needs the png package", call. = FALSE)
   if (inherits(r, "nativeRaster")) {

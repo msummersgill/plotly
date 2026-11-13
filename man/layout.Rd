@@ -2,25 +2,22 @@
 % Please edit documentation in R/layout.R
 \name{layout}
 \alias{layout}
-\title{Modify the layout of a plot}
+\title{Modify the layout of a plotly visualization}
 \usage{
 layout(p, ..., data = NULL)
 }
 \arguments{
-\item{p}{A \code{\link[=plot_ly]{plot_ly()}} object, \code{\link[=go_figure]{go_figure()}} or matrix.}
+\item{p}{A plotly object.}
 
-\item{...}{Layout attributes.}
+\item{...}{Arguments to the layout object. For documentation,
+see \url{https://plotly.com/r/reference/layout/}}
 
-\item{data}{A data frame for formulas in \code{...}.}
-}
-\value{
-The modified plot.
+\item{data}{A data frame to associate with this layout (optional). If not
+provided, arguments are evaluated using the data frame in \code{\link[=plot_ly]{plot_ly()}}.}
 }
 \description{
-For \code{\link[=plot_ly]{plot_ly()}} objects, layout attributes may be formulas referencing the
-data (as in the legacy plotly package). For a \code{\link[=go_figure]{go_figure()}}, this is
-\code{\link[=update_layout]{update_layout()}}. For a matrix, \code{\link[graphics:layout]{graphics::layout()}} is called.
+Modify the layout of a plotly visualization
 }
-\examples{
-mtcars |> plot_ly(x = ~wt, y = ~mpg) |> layout(title = "Cars", xaxis = list(title = "Weight"))
+\author{
+Carson Sievert
 }

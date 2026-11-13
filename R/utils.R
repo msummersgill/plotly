@@ -47,26 +47,33 @@ compact <- function(x) {
 
 is_discrete <- function(x) is.factor(x) || is.character(x) || is.logical(x)
 
-getLevels <- function(x) if (is.factor(x)) levels(x) else sort(unique(x))
+modify_list <- function(x, y, ...) {
+  modifyList(x %||% list(), y %||% list(), ...)
+}
 
 deparse2 <- function(x) {
   if (is.null(x) || !is.language(x)) return(NULL)
   sub("^~", "", paste(deparse(x, 500L), collapse = ""))
 }
 
-modify_list <- function(x, y, ...) {
-  modifyList(x %||% list(), y %||% list(), ...)
-}
-
 new_id <- function() {
   basename(tempfile(""))
 }
 
+getLevels <- function(x) {
+  if (is.factor(x)) levels(x) else sort(unique(x))
+}
+
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
 
+# Don't attempt to do "tidy" data training on these trace types
+# Note that non-tidy traces expect/anticipate data_array's of varying lengths
 is_tidy <- function(trace) {
-  !(trace[["type"]] %||l% "scatter") %in% c("mesh3d", "heatmap", "histogram2d", "isosurface",
-                                         "histogram2dcontour", "contour", "surface")
+  type <- trace[["type"]] %||% "scatter"
+  !type %in% c(
+    "mesh3d", "heatmap", "histogram2d", "isosurface",
+    "histogram2dcontour", "contour", "surface"
+  )
 }
 
 LP_NPSCALES <- c("color", "stroke", "symbol", "linetype", "size", "span", "split")
@@ -77,9 +84,10 @@ LP_GL_TYPES <- c("scattergl", "scatter3d", "mesh3d", "heatmapgl", "pointcloud", 
 LP_COLORWAY <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
                  "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
 
+# is grouping relevant for this geometry? (e.g., grouping doesn't effect a scatterplot)
 has_group <- function(trace) {
   inherits(trace, paste0("plotly_", c("segment", "path", "line", "polygon"))) ||
-    (grepl("scatter", trace[["type"]] %||l% "") && grepl("lines", trace[["mode"]] %||l% ""))
+    (grepl("scatter", trace[["type"]]) && grepl("lines", trace[["mode"]]))
 }
 
 # currently implemented non-positional scales in plot_ly()
@@ -206,17 +214,6 @@ plain_value <- function(x) {
   x
 }
 
-# Set a value at a path of names, creating lists along the way (a NULL value
-# is stored, not dropped).
-set_path_value <- function(x, path, value) {
-  if (length(path) == 1L) {
-    x[path] <- list(value)
-    return(x)
-  }
-  x[[path[[1L]]]] <- set_path_value(x[[path[[1L]]]] %||l% list(), path[-1L], value)
-  x
-}
-
 stats_named <- function(x, nm) {
   names(x) <- nm
   x
@@ -233,9 +230,6 @@ range_or_null <- function(v) {
 
 # The events plotly.core's widget sends to Shiny by default.
 default_events <- function() unclass(plotly.core::plotly_widget(list())$x$shinyEvents)
-
-# data.table symbols used by group2NA()
-utils::globalVariables(c(".I", ".N"))
 
 colorway <- function(p = NULL) {
   lapply(as.list(p$x$layout$colorway %||l% LP_COLORWAY), function(x) structure(x, class = "colorway"))
@@ -262,6 +256,7 @@ crosstalk_key <- function() ".crossTalkKey"
 # # equivalent to `y$a[[1]]$b <- 2`
 # y <- re_place(y, list("a", 1, "b"), 3)
 # y
+
 
 has_line <- function(types, modes) {
   is_scatter <- grepl("scatter", types)
@@ -333,15 +328,14 @@ rm_asis <- function(x) {
   else if (inherits(x, "AsIs")) class(x) <- setdiff(class(x), "AsIs")
   else x
 }
-
 prefix_class <- function(x, y) {
   structure(x, class = unique(c(y, class(x))))
 }
-
 remove_class <- function(x, y) {
   oldClass(x) <- setdiff(oldClass(x), y)
   x
 }
+
 
 # check that suggested packages are installed
 try_library <- function(pkg, fun = NULL) {

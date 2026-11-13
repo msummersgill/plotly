@@ -1,17 +1,15 @@
-#' Modify the layout of a plot
-#'
-#' For [plot_ly()] objects, layout attributes may be formulas referencing the
-#' data (as in the legacy plotly package). For a [go_figure()], this is
-#' [update_layout()]. For a matrix, [graphics::layout()] is called.
-#'
-#' @param p A [plot_ly()] object, [go_figure()] or matrix.
-#' @param ... Layout attributes.
-#' @param data A data frame for formulas in `...`.
-#' @return The modified plot.
+#' Modify the layout of a plotly visualization
+#' 
+#' @param p A plotly object.
+#' @param ... Arguments to the layout object. For documentation,
+#' see \url{https://plotly.com/r/reference/layout/}
+#' @param data A data frame to associate with this layout (optional). If not 
+#' provided, arguments are evaluated using the data frame in [plot_ly()].
+#' @author Carson Sievert
 #' @export
-#' @examples
-#' mtcars |> plot_ly(x = ~wt, y = ~mpg) |> layout(title = "Cars", xaxis = list(title = "Weight"))
-layout <- function(p, ..., data = NULL) UseMethod("layout")
+layout <- function(p, ..., data = NULL) {
+  UseMethod("layout")
+}
 
 #' @export
 layout.matrix <- function(p, ..., data = NULL) graphics::layout(p, ...)
@@ -27,19 +25,42 @@ layout.plotly <- function(p, ..., data = NULL) {
   p <- add_data(p, data)
   attrs <- list(...)
   if (!is.null(attrs[["height"]]) || !is.null(attrs[["width"]])) {
-    warning("Specifying width/height in layout() is now deprecated.\nPlease specify in plot_ly()", call. = FALSE)
+    warning("Specifying width/height in layout() is now deprecated.\n", 
+            "Please specify in ggplotly() or plot_ly()", call. = FALSE)
   }
-  p$x$layoutAttrs <- c(p$x$layoutAttrs %||l% list(), stats_named(list(attrs), p$x$cur_data %||l% ""))
+  # similar to add_trace()
+  p$x$layoutAttrs <- c(
+    p$x$layoutAttrs %||% list(), 
+    setNames(list(attrs), p$x$cur_data)
+  )
   p
 }
 
-#' Add a range slider to the x axis
+#' Add a range slider to the x-axis
 #'
-#' @param p A [plot_ly()] object or [go_figure()].
-#' @param start,end Initial range (numbers, Dates or date-times).
-#' @param ... Range slider attributes.
-#' @return The modified plot.
+#' @param p plotly object.
+#' @param start a start date/value.
+#' @param end an end date/value.
+#' @param ... these arguments are documented here 
+#' \url{https://plotly.com/r/reference/#layout-xaxis-rangeslider}
 #' @export
+#' @author Carson Sievert
+#' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
+#' 
+#' plot_ly(x = time(USAccDeaths), y = USAccDeaths) %>% 
+#'   add_lines() %>%
+#'   rangeslider()
+#'   
+#' d <- tibble::tibble(
+#'   time = seq(as.Date("2016-01-01"), as.Date("2016-08-31"), by = "days"),
+#'   y = rnorm(seq_along(time))
+#'  )
+#'  
+#' plot_ly(d, x = ~time, y = ~y) %>%
+#'   add_lines() %>%
+#'   rangeslider(d$time[5], d$time[50])
+#'   
+#' 
 rangeslider <- function(p, start = NULL, end = NULL, ...) {
   rng <- if (!is.null(start) || !is.null(end)) list(to_milliseconds(start), to_milliseconds(end))
   if (inherits(p, "go_figure")) {
@@ -87,5 +108,3 @@ verify_config <- function(p) {
   }
   p
 }
-
-

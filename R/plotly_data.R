@@ -1,56 +1,10 @@
-#' @rdname plotly_data
-#' @export
-plotly_data <- function(p, id = p$x$cur_data) {
-  if (!is_legacy_plot(p)) stop("`plotly_data()` expects a plot_ly() object as its first argument.", call. = FALSE)
-  f <- p$x$visdat[[id]]
-  if (is.null(f)) return(NULL)
-  shared_data(f())
-}
-
-#' Data with keys for linked highlighting
-#'
-#' Creates a [crosstalk::SharedData] object for use as [plot_ly()] data:
-#' plots (and other crosstalk-compatible htmlwidgets) made from data with the
-#' same `group` are linked, so selecting observations in one highlights them
-#' in the others (see [highlight()]). Requires the crosstalk package.
-#'
-#' @param x A data frame, or a [plot_ly()] object (whose current data is
-#'   replaced by a keyed version).
-#' @param ... Passed to `crosstalk::SharedData$new()`: notably `key` (a
-#'   formula or character vector; default: row names) and `group` (the link
-#'   group name, also the selectize dropdown's label).
-#' @return A [crosstalk::SharedData] object, or the plot.
-#' @seealso [highlight()]
-#' @export
-#' @examplesIf requireNamespace("crosstalk", quietly = TRUE)
-#' d <- mtcars |> highlight_key(~cyl, group = "Cylinders")
-#' d |> plot_ly(x = ~wt, y = ~mpg) |> highlight(selectize = TRUE)
-highlight_key <- function(x, ...) UseMethod("highlight_key")
-
-#' @export
-highlight_key.plotly <- function(x, ...) {
-  require_crosstalk()
-  d <- plotly_data(x)
-  d[[LP_CT_KEY]] <- NULL
-  attr(d, "set") <- NULL
-  add_data(x, crosstalk::SharedData$new(d, ...))
-}
-
-#' @export
-highlight_key.default <- function(x, ...) {
-  require_crosstalk()
-  crosstalk::SharedData$new(x, ...)
-}
-
 #' Obtain data associated with a plotly graph
 #'
 #' `plotly_data()` returns data associated with 
 #' a plotly visualization (if there are multiple data frames, by default, 
-#' it returns the most recent one). `add_data()` sets new data for
-#' subsequent layers.
+#' it returns the most recent one). 
 #' 
 #' @param p a plotly visualization.
-#' @param data a data frame.
 #' @param id a character string or number referencing an "attribute layer".
 #' 
 #' @param .data a plotly visualization.
@@ -58,6 +12,7 @@ highlight_key.default <- function(x, ...) {
 #' @param ... arguments passed onto the relevant method.
 #' 
 #' @name plotly_data
+#' @export
 #' @examplesIf interactive() || !identical(.Platform$OS.type, "windows")
 #' 
 #' # use group_by() to define groups of visual markings
@@ -102,7 +57,59 @@ highlight_key.default <- function(x, ...) {
 #' p %>% filter(cyl == 4) %>% add_markers(name = "four cylinders")
 #' 
 #' 
-NULL
+plotly_data <- function(p, id = p$x$cur_data) {
+  if (!is.plotly(p)) {
+    stop("`plotly_data()` expects a plotly object as it's first argument.", call. = FALSE)
+  }
+  f <- p$x$visdat[[id]]
+  # if data has been specified, f should be a closure that, when called,
+  # returns data
+  if (is.null(f)) return(f)
+  if (!is.function(f)) stop("Expected a closure", call. = FALSE)
+  dat <- f()
+  if (crosstalk::is.SharedData(dat)) {
+    key <- dat$key()
+    set <- dat$groupName()
+    dat <- dat$origData()
+    dat[[crosstalk_key()]] <- key
+    # not allowed for list-columns!
+    #dat <- dplyr::group_by_(dat, crosstalk_key(), add = TRUE)
+    dat <- structure(dat, set = set)
+  }
+  prefix_class(dat, "plotly_data")
+}
+
+#' Highlight/query data based on primary key
+#' 
+#' This function simply creates an object of class [crosstalk::SharedData].
+#' The reason it exists is to make it easier to teach others how to leverage
+#' its functionality in plotly. It also makes it more discoverable if one
+#' is already aware of [highlight].
+#' 
+#' @param x a plotly visualization or a `data.frame`.
+#' @param ... arguments passed to `crosstalk::SharedData$new()`
+#' @export
+#' @author Carson Sievert
+#' @return An object of class [crosstalk::SharedData]
+#' @seealso [highlight]
+highlight_key <- function(x, ...) {
+  UseMethod("highlight_key")
+}
+
+#' @export
+highlight_key.plotly <- function(x, ...) {
+  require_crosstalk()
+  d <- plotly_data(x)
+  d[[LP_CT_KEY]] <- NULL
+  attr(d, "set") <- NULL
+  add_data(x, crosstalk::SharedData$new(d, ...))
+}
+
+#' @export
+highlight_key.default <- function(x, ...) {
+  crosstalk::SharedData$new(x, ...)
+}
+
 
 # ---------------------------------------------------------------------------
 # dplyr methods

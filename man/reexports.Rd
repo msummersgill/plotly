@@ -27,7 +27,6 @@
 \alias{filter}
 \alias{filter_}
 \alias{reexports}
-\alias{add_trace}
 \alias{add_choropleth}
 \alias{add_contour}
 \alias{add_heatmap}
@@ -112,6 +111,6 @@ below to see their documentation.
 \describe{
   \item{magrittr}{\code{\link[magrittr:pipe]{\%>\%}}}
 
-  \item{plotly.core}{\code{\link[plotly.core:go_choropleth]{add_choropleth}}, \code{\link[plotly.core:go_contour]{add_contour}}, \code{\link[plotly.core:go_heatmap]{add_heatmap}}, \code{\link[plotly.core:go_histogram]{add_histogram}}, \code{\link[plotly.core:go_histogram2d]{add_histogram2d}}, \code{\link[plotly.core:go_histogram2dcontour]{add_histogram2dcontour}}, \code{\link[plotly.core:go_image]{add_image}}, \code{\link[plotly.core:go_pie]{add_pie}}, \code{\link[plotly.core:go_scattergeo]{add_scattergeo}}, \code{\link[plotly.core:go_surface]{add_surface}}, \code{\link[plotly.core:go_table]{add_table}}, \code{\link[plotly.core:add_traces]{add_trace}}, \code{\link[plotly.core:plotly_widget]{as_widget}}, \code{\link[plotly.core]{config}}, \code{\link[plotly.core]{event_data}}, \code{\link[plotly.core]{event_register}}, \code{\link[plotly.core:event_register]{event_unregister}}, \code{\link[plotly.core:save_image]{kaleido}}, \code{\link[plotly.core]{last_plot}}, \code{\link[plotly.core]{plotly_json}}, \code{\link[plotly.core]{plotlyOutput}}, \code{\link[plotly.core]{plotlyProxy}}, \code{\link[plotly.core:plotlyProxy]{plotlyProxyInvoke}}, \code{\link[plotly.core:plotlyOutput]{renderPlotly}}, \code{\link[plotly.core]{save_image}}, \code{\link[plotly.core]{TeX}}}
+  \item{plotly.core}{\code{\link[plotly.core:go_choropleth]{add_choropleth}}, \code{\link[plotly.core:go_contour]{add_contour}}, \code{\link[plotly.core:go_heatmap]{add_heatmap}}, \code{\link[plotly.core:go_histogram]{add_histogram}}, \code{\link[plotly.core:go_histogram2d]{add_histogram2d}}, \code{\link[plotly.core:go_histogram2dcontour]{add_histogram2dcontour}}, \code{\link[plotly.core:go_image]{add_image}}, \code{\link[plotly.core:go_pie]{add_pie}}, \code{\link[plotly.core:go_scattergeo]{add_scattergeo}}, \code{\link[plotly.core:go_surface]{add_surface}}, \code{\link[plotly.core:go_table]{add_table}}, \code{\link[plotly.core:plotly_widget]{as_widget}}, \code{\link[plotly.core]{config}}, \code{\link[plotly.core]{event_data}}, \code{\link[plotly.core]{event_register}}, \code{\link[plotly.core:event_register]{event_unregister}}, \code{\link[plotly.core:save_image]{kaleido}}, \code{\link[plotly.core]{last_plot}}, \code{\link[plotly.core]{plotly_json}}, \code{\link[plotly.core]{plotlyOutput}}, \code{\link[plotly.core]{plotlyProxy}}, \code{\link[plotly.core:plotlyProxy]{plotlyProxyInvoke}}, \code{\link[plotly.core:plotlyOutput]{renderPlotly}}, \code{\link[plotly.core]{save_image}}, \code{\link[plotly.core]{TeX}}}
 }}
 

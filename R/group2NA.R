@@ -23,8 +23,23 @@
 #' then `groupNames`, then `ordered`. As long as `groupNames` 
 #' contains valid variable names, new rows will also be inserted to separate 
 #' the groups.
-#' @examples
-#' data.frame(g = c(1, 1, 2, 2), x = 1:4) |> group2NA("g")
+#' @examplesIf interactive()
+#' 
+#' # note the insertion of new rows with missing values 
+#' group2NA(mtcars, "vs", "cyl")
+#' 
+#' # need to group lines by city somehow!
+#' plot_ly(txhousing, x = ~date, y = ~median) %>% add_lines()
+#' 
+#' # instead of using group_by(), you could use group2NA()
+#' tx <- group2NA(txhousing, "city")
+#' plot_ly(tx, x = ~date, y = ~median) %>% add_lines()
+#' 
+#' # add_lines() will ensure paths are sorted by x, but this is equivalent
+#' tx <- group2NA(txhousing, "city", ordered = "date")
+#' plot_ly(tx, x = ~date, y = ~median) %>% add_paths()
+#' 
+
 group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
                      retrace.first = inherits(data, "GeomPolygon")) {
   
@@ -83,3 +98,5 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
 
   structure(dt, class = datClass)
 }
+
+utils::globalVariables(c(".I", ".N"))
