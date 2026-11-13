@@ -46,6 +46,10 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
         p$x$data[[i]]$zmin <- limits[1]
         p$x$data[[i]]$zmax <- limits[2]
       } else {
+        # since the colorscale is in a different trace, retrain all traces
+        # TODO: without knowing which traces are tied to the colorscale,
+        # there are always going to be corner-cases where limits are applied 
+        # to more traces than it should
         p$x$data <- lapply(p$x$data, function(x) {
           # marker and line colors (e.g. scatter3d lines+markers), as plotly 4.x
           for (k in c("marker", "line")) {
@@ -63,6 +67,7 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
     if (z_color) p$x$data[[i]]$colorbar <- modify_list(tr$colorbar, list(...))
     else p$x$data[[i]]$marker$colorbar <- modify_list(tr$marker$colorbar, list(...))
   }
+  
   p
 }
 

@@ -44,6 +44,11 @@ sf_basic <- function(data) {
 
 # TODO: speed this up by avoiding conversion redundant features (e.g. animation)
 fortify_sf <- function(model) {
+  # matrix with coordinates (X, Y, possibly Z and/or M) in rows, possibly 
+  # followed by integer indicators L1,...,L3 that point out to which structure 
+  # the coordinate belongs; for POINT this is absent (each coordinate is a feature), 
+  # for LINESTRING L1 refers to the feature, for MULTIPOLYGON L1 refers to the main 
+  # ring or holes, L2 to the ring id in the MULTIPOLYGON, and L3 to the simple feature.
   coords <- sf::st_coordinates(sf::st_geometry(model))
   colnames(coords) <- tolower(colnames(coords))
   lcols <- grep("^l", colnames(coords))
@@ -71,6 +76,7 @@ fortify_sf <- function(model) {
   attrs <- list(set = attr(d, "set"), plotly_groups = attr(d, "plotly_groups"))
   d <- as.data.frame(d)
   for (a in names(attrs)) if (!is.null(attrs[[a]])) attr(d, a) <- attrs[[a]]
+  # TODO: drop l1/l2/l3?
   d
 }
 
@@ -116,6 +122,8 @@ fit_bounds <- function(p) {
     p$x$layout[[xname]]$scaleanchor <- r[[2]]
     p$x$layout[[xname]]$scaleratio <- cos(mean(rng$yrng) * pi / 180)
   }
+  # Internal _bbox field no longer needed
+  #p$x$data <- lapply(p$x$data, function(tr) { tr[["_bbox"]] <- NULL; tr })
   p
 }
 

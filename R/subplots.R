@@ -139,47 +139,59 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
     out <- lapply(keys, function(k) lay[[k]] %||l% list())
     stats_named(out, keys)
   }
-  x_axes <- lapply(layouts, pick_axes, "x")
-  y_axes <- lapply(layouts, pick_axes, "y")
-  if (!titleX) x_axes <- lapply(x_axes, function(ax) lapply(ax, function(a) { a$title <- NULL; a }))
-  if (!titleY) y_axes <- lapply(y_axes, function(ax) lapply(ax, function(a) { a$title <- NULL; a }))
-  nx <- lengths(x_axes)
-  ny <- lengths(y_axes)
+  xAxes <- lapply(layouts, pick_axes, "x")
+  yAxes <- lapply(layouts, pick_axes, "y")
+  if (!titleX) xAxes <- lapply(xAxes, function(ax) lapply(ax, function(a) { a$title <- NULL; a }))
+  if (!titleY) yAxes <- lapply(yAxes, function(ax) lapply(ax, function(a) { a$title <- NULL; a }))
+  xAxisN <- lengths(xAxes)
+  yAxisN <- lengths(yAxes)
+  # old -> new axis name dictionary
   ncols <- ceiling(length(plots) / nrows)
-  x_id <- seq_len(sum(nx))
+  xAxisID <- seq_len(sum(xAxisN))
   if (shareX) {
-    if (length(unique(nx)) > 1) warning("Must have a consistent number of axes per 'subplot' to share them.", call. = FALSE)
-    else x_id <- rep(rep(seq_len(ncols * unique(nx)), length.out = length(plots)), unique(nx))
+    if (length(unique(xAxisN)) > 1) warning("Must have a consistent number of axes per 'subplot' to share them.", call. = FALSE)
+    else xAxisID <- rep(rep(seq_len(ncols * unique(xAxisN)), length.out = length(plots)), unique(xAxisN))
   }
-  y_id <- seq_len(sum(ny))
+  yAxisID <- seq_len(sum(yAxisN))
   if (shareY) {
-    if (length(unique(ny)) > 1) warning("Must have a consistent number of axes per 'subplot' to share them.", call. = FALSE)
-    else y_id <- rep(rep(seq_len(nrows * unique(nx)), each = ncols, length.out = length(plots)), unique(ny))
+    if (length(unique(yAxisN)) > 1) warning("Must have a consistent number of axes per 'subplot' to share them.", call. = FALSE)
+    else yAxisID <- rep(rep(seq_len(nrows * unique(xAxisN)), each = ncols, length.out = length(plots)), unique(yAxisN))
   }
-  x_cur <- unlist(lapply(x_axes, names))
-  y_cur <- unlist(lapply(y_axes, names))
-  x_new <- paste0(sub("[0-9]+$", "", x_cur), sub("^1$", "", x_id))
-  y_new <- paste0(sub("[0-9]+$", "", y_cur), sub("^1$", "", y_id))
-  x_map <- split(stats_named(x_cur, x_new), rep(seq_along(plots), nx))
-  y_map <- split(stats_named(y_cur, y_new), rep(seq_along(plots), ny))
-  dom <- get_domains(length(plots), nrows, margin, widths = widths, heights = heights)
+  # current "axis" names
+  xCurrentNames <- unlist(lapply(xAxes, names))
+  yCurrentNames <- unlist(lapply(yAxes, names))
+  xNewNames <- paste0(
+    sub("[0-9]+$", "", xCurrentNames), 
+    sub("^1$", "", xAxisID)
+  )
+  yNewNames <- paste0(
+    sub("[0-9]+$", "", yCurrentNames), 
+    sub("^1$", "", yAxisID)
+  )
+  x_map <- split(stats_named(xCurrentNames, xNewNames), rep(seq_along(plots), xAxisN))
+  y_map <- split(stats_named(yCurrentNames, yNewNames), rep(seq_along(plots), yAxisN))
+  # domains of each subplot
+  domainInfo <- get_domains(
+    length(plots), nrows, margin, widths = widths, heights = heights
+  )
   rescale_dom <- function(old, new) sort(rescale(unlist(old %||l% c(0, 1)), new, from = c(0, 1)))
 
   for (i in seq_along(plots)) {
     xm <- x_map[[i]]
     ym <- y_map[[i]]
-    x_axes[[i]] <- stats_named(x_axes[[i]], names(xm))
-    y_axes[[i]] <- stats_named(y_axes[[i]], names(ym))
-    for (j in seq_along(x_axes[[i]])) {
-      if (grepl("^geo[0-9]*$|^map[0-9]*$", names(x_axes[[i]])[j])) next
-      m <- ym[ym %in% sub("y", "yaxis", x_axes[[i]][[j]]$anchor %||l% "y")]
-      x_axes[[i]][[j]]$anchor <- sub("axis", "", names(m))
+    xAxes[[i]] <- stats_named(xAxes[[i]], names(xm))
+    yAxes[[i]] <- stats_named(yAxes[[i]], names(ym))
+    for (j in seq_along(xAxes[[i]])) {
+      if (grepl("^geo[0-9]*$|^map[0-9]*$", names(xAxes[[i]])[j])) next
+      m <- ym[ym %in% sub("y", "yaxis", xAxes[[i]][[j]]$anchor %||l% "y")]
+      xAxes[[i]][[j]]$anchor <- sub("axis", "", names(m))
     }
-    for (j in seq_along(y_axes[[i]])) {
-      if (grepl("^geo[0-9]*$|^map[0-9]*$", names(y_axes[[i]])[j])) next
-      m <- xm[xm %in% sub("x", "xaxis", y_axes[[i]][[j]]$anchor %||l% "x")]
-      y_axes[[i]][[j]]$anchor <- sub("axis", "", names(m))
+    for (j in seq_along(yAxes[[i]])) {
+      if (grepl("^geo[0-9]*$|^map[0-9]*$", names(yAxes[[i]])[j])) next
+      m <- xm[xm %in% sub("x", "xaxis", yAxes[[i]][[j]]$anchor %||l% "x")]
+      yAxes[[i]][[j]]$anchor <- sub("axis", "", names(m))
     }
+    
     for (key in c("geo", "subplot", "xaxis", "yaxis")) {
       old <- unlist(lapply(traces[[i]], `[[`, key))
       if (!length(old)) next
@@ -187,6 +199,8 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
       amap <- stats_named(sub("axis", "", amap), sub("axis", "", names(amap)))
       new <- names(amap)[match(old, amap)]
       traces[[i]] <- Map(function(tr, a) { tr[[key]] <- a; tr }, traces[[i]], new)
+      # bump annotation, image, shape xref/yref
+      # (none of these layout components have geo/subplot support)
       ref <- list(xaxis = "xref", yaxis = "yref")[[key]]
       if (is.null(ref)) next
       bump <- function(obj, dflt = sub("ref", "", ref)) {
@@ -200,8 +214,8 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
       shapes[[i]] <- lapply(shapes[[i]], bump)
       images[[i]] <- lapply(images[[i]], bump, "paper")
     }
-    xd <- as.numeric(dom[i, c("xstart", "xend")])
-    yd <- as.numeric(dom[i, c("yend", "ystart")])
+    xd <- as.numeric(domainInfo[i, c("xstart", "xend")])
+    yd <- as.numeric(domainInfo[i, c("yend", "ystart")])
     fix <- function(ax, main) {
       if (is.list(ax$domain) && all(c("x", "y") %in% names(ax$domain))) {
         ax$domain$x <- rescale_dom(ax$domain$x, xd)
@@ -211,11 +225,11 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
       }
       ax
     }
-    x_axes[[i]] <- lapply(x_axes[[i]], fix, main = xd)
-    y_axes[[i]] <- lapply(y_axes[[i]], fix, main = yd)
+    xAxes[[i]] <- lapply(xAxes[[i]], fix, main = xd)
+    yAxes[[i]] <- lapply(yAxes[[i]], fix, main = yd)
   }
-  out <- list(data = unlist(traces, recursive = FALSE), layout = Reduce(modify_list, c(x_axes, rev(y_axes))))
-  rows <- split(dom, seq_along(plots))
+  out <- list(data = unlist(traces, recursive = FALSE), layout = Reduce(modify_list, c(xAxes, rev(yAxes))))
+  rows <- split(domainInfo, seq_along(plots))
   out$layout$annotations <- unlist(Map(reposition, annotations, rows), recursive = FALSE)
   out$layout$shapes <- unlist(Map(reposition, shapes, rows), recursive = FALSE)
   out$layout$images <- unlist(Map(reposition, images, rows), recursive = FALSE)

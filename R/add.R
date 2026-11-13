@@ -308,16 +308,28 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
   bbox <- as.list(sf::st_bbox(dat))
   set <- attr(dat, "set")
   d <- sf_basic(dat)
+  # inherit attributes from the "first layer" (except the plotly_eval class)
   attrz <- if (inherit) modify_list(unclass(p$x$attrs[[1]]), list(...)) else list(...)
+  
   for (i in seq_along(d)) {
+    # sensible mode/style defaults based on the feature type (e.g. polygon, path, point)
     attrs <- modify_list(sf_default_attrs(d[[i]]), attrz)
-    # scatter3d doesn't support fill
+    # scatter3d doesn't currently support fill
     if ("z" %in% names(attrs)) attrs$fill <- NULL
-    args <- list(p = p, class = "plotly_sf", x = x, y = y, `_bbox` = bbox, set = set,
-                 data = d[[i]], inherit = inherit)
+    args <- list(
+      p = p, 
+      class = "plotly_sf", 
+      x = x,
+      y = y,
+      `_bbox` = bbox,
+      set = set,
+      data = if ("group" %in% names(d[[i]])) group_by_add(d[[i]], !!rlang::sym("group")) else d[[i]], 
+      inherit = inherit
+    )
     args <- modify_list(args, attrs)
-    p <- do.call(add_classed, args)
+    p <- do.call(add_trace_classed, args)
   }
+  
   p
 }
 

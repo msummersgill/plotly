@@ -128,13 +128,20 @@
 #' 
 #' }
 #' 
-plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors = NULL, alpha = NULL,
-                    stroke, strokes = NULL, alpha_stroke = 1, size, sizes = c(10, 100), span, spans = c(1, 20),
-                    symbol, symbols = NULL, linetype, linetypes = NULL, split, frame,
+plot_ly <- function(data = data.frame(), ..., type = NULL, name,
+                    color, colors = NULL, alpha = NULL, 
+                    stroke, strokes = NULL, alpha_stroke = 1,
+                    size, sizes = c(10, 100), 
+                    span, spans = c(1, 20),
+                    symbol, symbols = NULL, 
+                    linetype, linetypes = NULL,
+                    split, frame, 
                     width = NULL, height = NULL, source = "A") {
   if (!is.data.frame(data) && !is_shared(data)) {
     stop("First argument, `data`, must be a data frame or crosstalk::SharedData object.", call. = FALSE)
   }
+  
+  # "native" plotly arguments
   attrs <- list(...)
   for (k in c("group", "inherit")) {
     if (!is.null(attrs[[k]])) {
@@ -142,15 +149,19 @@ plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors =
       attrs[[k]] <- NULL
     }
   }
-  if (!missing(name)) attrs$name <- name
-  if (!missing(color)) attrs$color <- color
-  if (!missing(stroke)) attrs$stroke <- stroke
-  if (!missing(size)) attrs$size <- size
-  if (!missing(span)) attrs$span <- span
-  if (!missing(symbol)) attrs$symbol <- symbol
-  if (!missing(linetype)) attrs$linetype <- linetype
-  if (!missing(split)) attrs$split <- split
-  if (!missing(frame)) attrs$frame <- frame
+  
+  # tack on variable mappings
+  attrs$name <- if (!missing(name)) name
+  attrs$color <- if (!missing(color)) color
+  attrs$stroke <- if (!missing(stroke)) stroke
+  attrs$size <- if (!missing(size)) size
+  attrs$span <- if (!missing(span)) span
+  attrs$symbol <- if (!missing(symbol)) symbol
+  attrs$linetype <- if (!missing(linetype)) linetype
+  attrs$split <- if (!missing(split)) split
+  attrs$frame <- if (!missing(frame)) frame
+  
+  # tack on scale ranges
   attrs$colors <- colors
   attrs$strokes <- strokes
   attrs$alpha <- alpha
@@ -159,14 +170,26 @@ plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors =
   attrs$spans <- spans
   attrs$symbols <- symbols
   attrs$linetypes <- linetypes
+  
+  # and, of course, the trace type
   attrs$type <- type
+  
+  # id for tracking attribute mappings and finding the most current data
   id <- new_id()
-  vis <- data
+  # avoid weird naming clashes
+  plotlyVisDat <- data
   x <- list(
-    visdat = stats_named(list(function() vis), id),
+    visdat = stats_named(list(function() plotlyVisDat), id),
     cur_data = id,
-    attrs = stats_named(list(attrs), id),
-    layout = list(width = width, height = height, margin = LP_MARGIN),
+    attrs = setNames(list(attrs), id),
+    # we always deal with a _list_ of traces and _list_ of layouts 
+    # since they can each have different data
+    layout = list(
+      width = width, 
+      height = height,
+      # sane margin defaults (mainly for RStudio)
+      margin = list(b = 40, l = 60, t = 25, r = 10)
+    ),
     source = source
   )
   legacy_widget_lazy(x)
@@ -318,6 +341,7 @@ layout.go_figure <- function(p, ..., data = NULL) update_layout(p, ...)
 to_milliseconds <- function(x) {
   if (inherits(x, "Date")) return(as.numeric(x) * 86400000)
   if (inherits(x, "POSIXt")) return(as.numeric(x) * 1000)
+  # throw warning?
   x
 }
 

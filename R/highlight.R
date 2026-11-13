@@ -99,26 +99,51 @@ highlight <- function(p, on = "plotly_click", off, persistent = getOption("persi
             "Arguments such as: hoverinfo and showInLegend \nhave been replaced by selected and other",
             call. = FALSE)
   }
-  if (opacityDim < 0 || 1 < opacityDim) stop("opacityDim must be between 0 and 1", call. = FALSE)
+  if (opacityDim < 0 || 1 < opacityDim) {
+    stop("opacityDim must be between 0 and 1", call. = FALSE)
+  }
   if (dynamic && length(color) < 2) {
     message("Adding more colors to the selection color palette.")
     color <- c(color, RColorBrewer::brewer.pal(4, "Set1"))
   }
   if (!dynamic && length(color) > 1) {
-    warning("Can only use a single color for selections when `dynamic = FALSE`.", call. = FALSE)
-    color <- color[1]
+    warning(
+      "Can only use a single color for selections when `dynamic = FALSE`.",
+      call. = FALSE
+    )
+    color <- color[1] 
   }
-  off_options <- paste0("plotly_", c("doubleclick", "deselect", "relayout"))
-  off <- if (missing(off)) default(highlight_off(on)) else if (!is.null(off)) match.arg(off, off_options)
+  # TODO: expose unhover?
+  off_options <- paste0(
+    "plotly_", c("doubleclick", "deselect", "relayout")
+  )
+  if (missing(off)) {
+    off_default <- switch(
+      on %||% "", 
+      plotly_selecting = ,
+      plotly_selected = "plotly_deselect",
+      plotly_click = "plotly_doubleclick",
+      plotly_hover = "plotly_doubleclick"
+    )
+    off <- default(off_default %||% "plotly_relayout")
+  }
+  
   if (isTRUE(persistent)) {
-    message("We recommend setting `persistent` to `FALSE` (the default) because persistent selection mode ",
-            "can now be used by holding the shift key (while triggering the `on` event).")
+    message(
+      "We recommend setting `persistent` to `FALSE` (the default) because ",
+      "persistent selection mode can now be used by holding the shift key ",
+      "(while triggering the `on` event)."
+    )
   }
+  
+  # main (non-plotly.js) spec passed along to HTMLwidgets.renderValue()
   p$x$highlight <- list(
+    # NULL may be used to disable on/off events
     on = if (!is.null(on)) match.arg(on, paste0("plotly_", c("click", "hover", "selected", "selecting"))),
-    off = off,
+    off = if (is.default(off)) off else if (!is.null(off)) match.arg(off, off_options),
     persistent = persistent,
     dynamic = dynamic,
+    # TODO: convert to hex...see colourpicker:::formatHEX()
     color = toRGB(color),
     selectize = selectize,
     defaultValues = defaultValues,
@@ -126,6 +151,7 @@ highlight <- function(p, on = "plotly_click", off, persistent = getOption("persi
     selected = selected,
     debounce = debounce
   )
+  
   p
 }
 
@@ -169,12 +195,16 @@ attrs_selected <- function(opacity = 1, ...) {
 supply_highlight_attrs <- function(p) {
   p$x$highlight <- p$x$highlight %||l% highlight_defaults()
   sets <- lapply(p$x$data, `[[`, "set")
-  no_set <- vapply(sets, is.null, logical(1))
-  if (all(no_set)) return(p)
+  noSet <- vapply(sets, is.null, logical(1))
+  
+  # If no sets are present, there's nothing more to do
+  if (all(noSet)) {
+    return(p)
+  }
   hl <- p$x$highlight
   groups <- unique(unlist(sets))
   p$x$highlight$ctGroups <- I(groups)
-  keys <- stats_named(lapply(p$x$data[!no_set], `[[`, "key"), unlist(sets[!no_set]))
+  keys <- stats_named(lapply(p$x$data[!noSet], `[[`, "key"), unlist(sets[!noSet]))
   for (g in groups) {
     raw_k <- unique(unlist(keys[names(keys) %in% g], use.names = FALSE))
     k <- as.character(raw_k)

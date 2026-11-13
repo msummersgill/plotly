@@ -12,7 +12,11 @@ layout <- function(p, ..., data = NULL) {
 }
 
 #' @export
-layout.matrix <- function(p, ..., data = NULL) graphics::layout(p, ...)
+layout.matrix <- function(p, ..., data = NULL) {
+  # workaround for the popular graphics::layout() function
+  # https://github.com/ropensci/plotly/issues/464
+  graphics::layout(p, ...)
+}
 
 #' @export
 layout.shiny.tag.list <- function(p, ..., data = NULL) {
@@ -67,7 +71,9 @@ rangeslider <- function(p, start = NULL, end = NULL, ...) {
     patch <- c(list(rangeslider = c(list(visible = TRUE), list(...))), if (!is.null(rng)) list(range = rng))
     return(update_xaxes(p, patch))
   }
-  if (sum(grepl("^xaxis", names(p$x$layout))) > 1) stop("Can only add a rangeslider to a plot with one x-axis", call. = FALSE)
+  if (sum(grepl("^xaxis", names(p$x$layout))) > 1) {
+    stop("Can only add a rangeslider to a plot with one x-axis", call. = FALSE)
+  }
   p$x$layout$xaxis$range <- rng
   p$x$layout$xaxis$rangeslider <- list(visible = TRUE, ...)
   p
