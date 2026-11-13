@@ -386,9 +386,6 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     p <- registerFrames(p, frameMapping = frameMapping)
   }
   
-  # set the default plotly.js events to register in shiny
-  p <- shiny_defaults_set(p)
-  
   p <- verify_guides(p)
   
   # verify colorscale attributes are in a sensible data structure
