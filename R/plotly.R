@@ -431,6 +431,10 @@ as_widget.list <- function(x, ...) {
     package = "plotly.core"
   )
   class(w) <- c("plotly_core", "plotly", "htmlwidget")
+  # plotly.js (the full bundle; see partial_bundle()) must be attached now:
+  # htmlwidgets collects dependencies before the preRenderHook runs
+  w <- plotly.core::set_plotlyjs_dependency(w, "full")
+  w$dependencies <- c(w$dependencies, crosstalk::crosstalkLibs())
   w
 }
 

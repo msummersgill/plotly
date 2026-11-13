@@ -320,12 +320,26 @@ drop_blank_family <- function(x) {
 
 # Rendering --------------------------------------------------------------------
 
-# preRenderHook of plot_ly() widgets: the plotly.core widget's payload
+# preRenderHook of plot_ly() widgets: the plotly.core widget's payload.
+# (htmlwidgets collects dependencies before this runs, so plotly.js is
+# attached when the widget is created, and replaced by partial_bundle().)
 render_go_figure <- function(w) {
-  cw <- plotly.core::plotly_widget(as_go_figure(w))
-  w$x <- cw$x
-  w$dependencies <- c(w$dependencies, cw$dependencies)
+  w$x <- plotly.core::plotly_widget(as_go_figure(w))$x
   w
+}
+
+# partial_bundle() for plot_ly() objects: the plot is built to find its trace
+# types, and its plotly.js dependency replaced (so call it last, as with
+# plotly 4.x)
+#' @export
+partial_bundle.plotly <- function(p, type = "auto", local = TRUE, minified = TRUE) {
+  w <- plotly.core::plotly_widget(as_go_figure(p), bundle = type)
+  dep <- Filter(function(d) identical(d$name, "plotly-main"), w$dependencies)
+  keep <- !vapply(p$dependencies, function(d) identical(d$name, "plotly-main"), logical(1))
+  p$dependencies <- c(dep, p$dependencies[keep])
+  # (and for the plotly.core widget the plot renders as)
+  p$x$bundle <- type
+  p
 }
 
 #' @export
@@ -335,6 +349,23 @@ as_widget.plotly <- function(x, ...) {
   w$height <- x$height %||% w$height
   w
 }
+
+# Printing, knitting and including a plot_ly() object in a page render it as
+# plotly.core's widget, with all the dependencies it needs (htmlwidgets
+# would otherwise only see those attached to the plot_ly() widget)
+#' @export
+print.plotly <- function(x, ...) {
+  print(as_widget(x), ...)
+  invisible(x)
+}
+
+#' @exportS3Method knitr::knit_print
+knit_print.plotly <- function(x, ..., options = NULL) {
+  knitr::knit_print(as_widget(x), ..., options = options)
+}
+
+#' @exportS3Method htmltools::as.tags
+as.tags.plotly <- function(x, ...) htmltools::as.tags(as_widget(x), ...)
 
 #' @export
 as_widget.gg <- function(x, ...) as_widget(ggplotly(x), ...)

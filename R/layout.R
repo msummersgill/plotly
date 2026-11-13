@@ -138,16 +138,24 @@ rangeslider <- function(p, start = NULL, end = NULL, ...) {
 config.plotly <- function(p, ..., cloud = FALSE, showSendToCloud = cloud, locale = NULL, mathjax = NULL) {
   
   if (!is.null(locale)) {
-    # (plotly.core loads the locale when the plot is rendered)
     p$x$config$locale <- locale
+    # Plotly.js defaults to US English (en-US) and includes 
+    # British English (en) in the standard bundle.
+    if (!locale %in% c("en", "en-US")) {
+      p$dependencies <- c(
+        p$dependencies,
+        list(plotly.core::locale_dependency(tolower(locale)))
+      )
+    }
   }
   
   if (!is.null(mathjax)) {
-    # plotly.core loads MathJax (from a CDN) when the plot is rendered
+    # MathJax is loaded from a CDN
     if (identical(match.arg(mathjax, c("cdn", "local")), "local")) {
       warning("`mathjax = \"local\"` is no longer supported; MathJax is loaded from a CDN", call. = FALSE)
     }
     p$x$mathjax <- "cdn"
+    p$dependencies <- c(list(plotly.core::mathjax_dependency()), p$dependencies)
   }
   
   args <- list(...)

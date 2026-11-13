@@ -115,8 +115,11 @@ highlight <- function(p, on = "plotly_click", off,
     color <- color[1] 
   }
   
-  # (plotly.core attaches the selectize and colourpicker libraries when the
-  # plot is rendered)
+  # attach HTML dependencies (these libraries are used in the HTMLwidgets.renderValue() method)
+  p$dependencies <- c(
+    p$dependencies,
+    plotly.core::crosstalk_deps(list(selectize = selectize, dynamic = dynamic))
+  )
   
   
   # TODO: expose unhover?
