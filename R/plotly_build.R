@@ -213,20 +213,36 @@ is_geo <- function(p) !is.null(p$x$layout$mapType)
 # Evaluate one trace's attributes and train its data (legacy plotly_build's
 # per-trace step).
 build_trace <- function(p, x, id) {
+  
+  # grab the data for this trace
   dat <- plotly_data(p, id)
+  
+  # formula/symbol/attribute evaluation
   trace <- structure(eval_attrs(x, dat), class = oldClass(x))
+  
+  # determine trace type (if not specified, can depend on the # of data points)
+  # note that this should also determine a sensible mode, if appropriate
   trace <- verify_type(trace)
+  
+  # verify orientation of boxes/bars
   trace <- verify_orientation(trace)
+  
+  # supply sensible defaults based on trace type
   trace <- coerce_attr_defaults(trace, p$x$layout)
-  # crosstalk (highlight_key()) data: attach its keys and group
+  
+  # attach crosstalk info, if necessary
   if (LP_CT_KEY %in% names(dat) && isTRUE(trace[["inherit"]] %||l% TRUE)) {
     trace[["key"]] <- trace[["key"]] %||l% dat[[LP_CT_KEY]]
     trace[["set"]] <- trace[["set"]] %||l% attr(dat, "set")
   }
+  
+  # if appropriate, tack on a group index
   grps <- if (has_group(trace)) data_groups(dat)
   if (length(grps) && any(lengths(trace) == NROW(dat))) {
     trace[[".plotlyGroupIndex"]] <- group_index(lapply(grps, function(g) dat[[g]]))
   }
+  
+  # add sensible axis names to layout
   titles <- list()
   for (ax in c("x", "y", "z")) {
     if (sum(names(trace) %in% ax) == 1) {
@@ -237,9 +253,16 @@ build_trace <- function(p, x, id) {
       }
     }
   }
+  
   if (inherits(trace, c("plotly_surface", "plotly_contour"))) {
-    if (!is.matrix(trace[["z"]]) || !is.numeric(trace[["z"]])) stop("`z` must be a numeric matrix", call. = FALSE)
+    # TODO: generate matrix for users?
+    # (1) if z is vector, and x/y are null throw error
+    # (2) if x/y/z are vectors and length(x) * length(y) == length(z), convert z to matrix
+    if (!is.matrix(trace[["z"]]) || !is.numeric(trace[["z"]])) {
+      stop("`z` must be a numeric matrix", call. = FALSE)
+    }
   }
+  
   entry <- get_validator(trace[["type"]])
   array_attrs <- if (is_tidy(trace)) {
     Filter(function(ch) {
@@ -247,34 +270,54 @@ build_trace <- function(p, x, id) {
       identical(v$superclass, "DataArrayValidator") || isTRUE(v$array_ok)
     }, entry$children)
   }
+  
+  # collect non-positional scales, plotly.js data_arrays, and "special"
+  # array attributes for "data training"
   all_attrs <- c(array_attrs, special_attrs(trace), LP_NPSCALES, "frame", ".plotlyGroupIndex", "text",
                  "key", "fillcolor", "name", "legendgroup")
   tr <- trace[names(trace) %in% all_attrs]
   # vectors, and unnamed lists with a value per point (e.g. customdata given
   # as a list-column), which are sorted and split into groups with the data
   per_point <- function(v) is.null(dim(v)) && (is.atomic(v) || (is.list(v) && !is.data.frame(v) && is.null(names(v)) && length(v) > 1))
+  # TODO: does it make sense to "train" matrices/2D-tables (e.g. z)?
   tr <- tr[vapply(tr, per_point, logical(1))]
   n <- max(c(0L, lengths(tr)))
   tr <- tr[lengths(tr) %in% c(1L, n) | vapply(tr, is.atomic, logical(1))]
   built <- if (n > 0) {
     data.table::as.data.table(lapply(tr, function(v) if (length(v) == 1L) rep(v, n) else v))
   } else data.table::data.table()
+  # avoid clobbering I() (i.e., variables that shouldn't be scaled)
   for (k in names(tr)) if (inherits(tr[[k]], "AsIs")) data.table::set(built, j = k, value = I(built[[k]]))
   if (NROW(built) > 0) {
+    # Build the index used to split one "trace" into multiple traces
     is_asis <- vapply(built, function(v) inherits(v, "AsIs"), logical(1))
     is_disc <- vapply(built, is_discrete, logical(1))
+    # note: can only have one linetype per trace
     is_split <- names(built) %in% c("split", "linetype", "frame", "fillcolor", "name") |
       (!is_asis & is_disc & names(built) %in% c("symbol", "color"))
     if (any(is_split)) {
       paste2 <- function(a, b) if (identical(a, b)) a else paste(a, b, sep = br())
       split_vars <- as.list(built)[is_split]
       data.table::set(built, j = ".plotlyTraceIndex", value = Reduce(paste2, split_vars))
+      # in registerFrames() we need to strip the frame from .plotlyTraceIndex
+      # so keep track of which variable it is...
       trace$frameOrder <- which(names(split_vars) %in% "frame")
     }
+    # Build the index used to determine grouping (later on, NAs are inserted
+    # via group2NA() to create the groups). This is done in 3 parts:
+    # 1. Sort data by the trace index since groups are nested within traces.
+    # 2. Translate missing values on positional scales to a grouping variable.
+    #    If grouping isn't relevant for this trace, a warning is thrown since
+    #    NAs are removed.
+    # 3. The grouping from (2) and any groups detected via dplyr::groups()
+    #    are combined into a single grouping variable, .plotlyGroupIndex
     built <- arrange_safe(built, ".plotlyTraceIndex")
     pos <- intersect(c("x", "y", "z"), names(built))
     complete <- if (length(pos)) !Reduce(`|`, lapply(pos, function(k) is.na(built[[k]]))) else rep(TRUE, nrow(built))
-    if (any(!complete) && !has_group(trace)) warning("Ignoring ", sum(!complete), " observations", call. = FALSE)
+    # warn about missing values if groups aren't relevant for this trace type
+    if (any(!complete) && !has_group(trace)) {
+      warning("Ignoring ", sum(!complete), " observations", call. = FALSE)
+    }
     data.table::set(built, j = ".plotlyMissingIndex", value = cumsum(!complete))
     if (!all(complete)) built <- built[complete]
     if (length(grps) && has_group(trace) && isTRUE(trace[["connectgaps"]])) {
@@ -294,8 +337,12 @@ build_trace <- function(p, x, id) {
                         nested = if (".plotlyTraceIndex" %in% names(built)) ".plotlyTraceIndex")
     }
     trace[[".plotlyVariableMapping"]] <- names(built)
-    for (k in names(built)) trace[[k]] <- built[[k]]
+    # copy over to the trace data
+    for (k in names(built)) {
+      trace[[k]] <- built[[k]]
+    }
   }
+  # TODO: provide a better way to clean up "high-level" attrs
   trace[c("ymin", "ymax", "yend", "xend")] <- NULL
   out <- trace[lengths(trace) > 0]
   oldClass(out) <- oldClass(trace)
@@ -331,7 +378,7 @@ is3d <- function(type = NULL) {
 # Functions used solely within plotly_build
 # ----------------------------------------------------------------
 
-registerFrames <- function(p, frame_mapping = NULL) {
+registerFrames <- function(p, frameMapping = NULL) {
   p$x$data <- lapply(p$x$data, function(tr) {
     tr[["frame"]] <- tr[["frame"]][[1]] %||l% NA
     tr
@@ -394,8 +441,8 @@ registerFrames <- function(p, frame_mapping = NULL) {
   p$x$data <- lapply(p$x$data, function(tr) { tr$frame <- NULL; tr })
   p$x$frames <- lapply(p$x$frames, function(f) { f$data <- lapply(f$data, function(tr) { tr$frame <- NULL; tr }); f })
 
-  defaultvalue <- if (length(frame_mapping) == 1) {
-    list(prefix = paste0(frame_mapping, ": "), xanchor = "right", font = list(size = 16, color = toRGB("gray80")))
+  defaultvalue <- if (length(frameMapping) == 1) {
+    list(prefix = paste0(frameMapping, ": "), xanchor = "right", font = list(size = 16, color = toRGB("gray80")))
   }
   p$animation <- p$animation %||l% animation_opts_defaults()
   types <- unique(unlist(lapply(p$x$frames, function(f) vapply(f$data, function(tr) tr$type %||l% "scatter", ""))))

@@ -22,7 +22,7 @@ add_data <- function(p, data = NULL) {
 #' Add trace(s) to a plotly visualization
 #' 
 #' @inheritParams plot_ly
-#' @param p a plotly object
+#' @param p,fig a plotly object
 #' @param inherit inherit attributes from [plot_ly()]?
 #' @param z a numeric matrix (unless [add_image()], which wants a raster object, see [as.raster()]).
 #' @param x the x variable.
@@ -149,7 +149,7 @@ add_data <- function(p, data = NULL) {
 #'   add_mesh()
 #' }
 #' 
-add_trace.plotly <- function(p, ...,
+add_trace.plotly <- function(fig, ...,
                              data = NULL, inherit = TRUE) {
   
   # "native" plotly arguments
@@ -160,7 +160,7 @@ add_trace.plotly <- function(p, ...,
     warning("The group argument has been deprecated. Use group_by() or split instead.")
   }
   
-  p <- add_data(p, data)
+  p <- add_data(fig, data)
   
   # inherit attributes from the "first layer" (except the plotly_eval class)
   if (inherit) {
