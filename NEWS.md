@@ -11,6 +11,8 @@
 * plotly.core's `add_<trace type>()` functions (e.g. `add_scatter()`,
   `add_bar()`, `add_violin()`) are re-exported and add a layer of that type to
   a `plot_ly()` object, evaluated when the plot is built, like `add_trace()`.
+* `partial_bundle()` is plotly.core's, which ships plotly.js's partial
+  bundles: it picks the smallest one with the plot's trace types.
 * Shiny (`plotlyOutput()`, `renderPlotly()`, `event_data()`, `plotlyProxy()`),
   `save_image()`/`kaleido()`, `plotly_json()`, `last_plot()` and `TeX()` are
   re-exported from plotly.core.
@@ -32,8 +34,7 @@
   `add_mesh()` (`add_mesh3d()`) and `add_area()` (`add_barpolar()`). They keep
   working as before.
 * `orca()` and `export()` use `save_image()`; `orca_serve()` is defunct.
-  `partial_bundle()` and `remove_typedarray_polyfill()` return the plot
-  unchanged. The Chart Studio functions (`api_create()`, `api()`, `signup()`,
+  `remove_typedarray_polyfill()` returns the plot unchanged. The Chart Studio functions (`api_create()`, `api()`, `signup()`,
   `plotly_POST()`, `get_figure()`, `plotly_IMAGE()`, ...) are defunct.
 
 # plotly 4.12.1

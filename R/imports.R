@@ -202,6 +202,8 @@ plotly.core::save_image
 #' @export
 plotly.core::kaleido
 #' @export
+plotly.core::partial_bundle
+#' @export
 plotly.core::TeX
 #' @export
 plotly.core::last_plot

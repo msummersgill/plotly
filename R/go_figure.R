@@ -207,7 +207,7 @@ as_go_figure <- function(p) {
   layout <- x$layout[!vapply(x$layout, is.null, logical(1))]
   fig <- validated(plotly.core::update_layout(fig, layout),
                    plotly.core::update_layout(fig, plotly.core::go_figure(layout = layout, skip_invalid = TRUE)$layout))
-  for (k in c("config", "source", "shinyEvents", "mathjax", "keys", "sets", "frameKeys", "highlight", "selectize", "fitBounds")) {
+  for (k in c("config", "source", "shinyEvents", "mathjax", "keys", "sets", "frameKeys", "highlight", "selectize", "fitBounds", "bundle")) {
     if (!is.null(x[[k]])) attr(fig, paste0("plotly_", k)) <- x[[k]]
   }
   fig
