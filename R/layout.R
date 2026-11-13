@@ -20,7 +20,10 @@ layout.matrix <- function(p, ..., data = NULL) {
 
 #' @export
 layout.shiny.tag.list <- function(p, ..., data = NULL) {
-  for (i in which(vapply(p, is_legacy_plot, logical(1)))) p[[i]] <- layout.plotly(p[[i]], ...)
+  idx <- which(vapply(p, is_legacy_plot, logical(1)))
+  for (i in idx) {
+    p[[i]] <- layout.plotly(p[[i]], ...)
+  }
   p
 }
 

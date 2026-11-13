@@ -89,16 +89,27 @@ require_crosstalk <- function() {
 #' highlight(layout(gg, showlegend = TRUE), selected = s)
 #' 
 
-highlight <- function(p, on = "plotly_click", off, persistent = getOption("persistent", FALSE),
-                      dynamic = FALSE, color = NULL, selectize = FALSE, defaultValues = NULL,
-                      opacityDim = getOption("opacityDim", 0.2), selected = attrs_selected(),
-                      debounce = 0, ...) {
+highlight <- function(p, on = "plotly_click", off, 
+                      persistent = getOption("persistent", FALSE),
+                      dynamic = FALSE, color = NULL,
+                      selectize = FALSE, defaultValues = NULL,
+                      opacityDim = getOption("opacityDim", 0.2), 
+                      selected = attrs_selected(), debounce = 0,
+                      ...) {
   if (!is_legacy_plot(p)) stop("highlight() works with plot_ly() objects.", call. = FALSE)
-  if (length(list(...))) {
-    warning("The following arguments are not supported:\n", toString(names(list(...))), "\n",
-            "Arguments such as: hoverinfo and showInLegend \nhave been replaced by selected and other",
-            call. = FALSE)
+  # currently ... is not-supported and will catch 
+  # some arguments we supported at one point 
+  dots <- list(...)
+  if (length(dots)) {
+    warning(
+      "The following arguments are not supported:\n",
+      toString(names(dots)), "\n",
+      "Arguments such as: hoverinfo and showInLegend \n",
+      "have been replaced by selected and other",
+      call. = FALSE
+    )
   }
+  
   if (opacityDim < 0 || 1 < opacityDim) {
     stop("opacityDim must be between 0 and 1", call. = FALSE)
   }

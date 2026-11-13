@@ -53,9 +53,13 @@ fortify_sf <- function(model) {
   colnames(coords) <- tolower(colnames(coords))
   lcols <- grep("^l", colnames(coords))
   set <- attr(model, "set")
+  
+  # no longer need to carry around sf class or geometry list-column
   model <- sf::st_drop_geometry(model)
   coords <- data.table::as.data.table(coords)
   model <- data.table::as.data.table(model)
+  
+  # no join necessary for points
   if (!length(lcols)) {
     d <- cbind(model, coords)
   } else {
@@ -67,6 +71,8 @@ fortify_sf <- function(model) {
     }
     # the last coordinate column is the feature (row) id
     d <- cbind(coords, model[coords[[ncol(coords)]], setdiff(names(model), names(coords)), with = FALSE])
+    # the combination of l1/l2/l3 should be treated like a new grouping var
+    # TODO: group is included here for ggplotly() purposes...it should probably be taken out...
     group_var <- as.list(d)[names(d) %in% c("group", "l1", "l2", "l3")]
     data.table::set(d, j = "group", value = Reduce(function(...) paste(..., sep = "-"), group_var))
     attr(d, "plotly_groups") <- "group"

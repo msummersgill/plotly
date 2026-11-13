@@ -21,4 +21,6 @@
 #' 
 
 plotly_IMAGE <- function(x, width = 1000, height = 500, format = "png", 
-                         scale = 1, out_file, ...) defunct("plotly_IMAGE", "use save_image() instead.")
+                         scale = 1, out_file, ...) {
+  defunct("plotly_IMAGE", "use save_image() instead.")
+}

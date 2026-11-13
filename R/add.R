@@ -22,7 +22,7 @@ add_data <- function(p, data = NULL) {
 #' Add trace(s) to a plotly visualization
 #' 
 #' @inheritParams plot_ly
-#' @param p,fig a plotly object
+#' @param p a plotly object
 #' @param inherit inherit attributes from [plot_ly()]?
 #' @param z a numeric matrix (unless [add_image()], which wants a raster object, see [as.raster()]).
 #' @param x the x variable.
@@ -149,7 +149,7 @@ add_data <- function(p, data = NULL) {
 #'   add_mesh()
 #' }
 #' 
-add_trace.plotly <- function(fig, ...,
+add_trace.plotly <- function(p, ...,
                              data = NULL, inherit = TRUE) {
   
   # "native" plotly arguments
@@ -160,7 +160,7 @@ add_trace.plotly <- function(fig, ...,
     warning("The group argument has been deprecated. Use group_by() or split instead.")
   }
   
-  p <- add_data(fig, data)
+  p <- add_data(p, data)
   
   # inherit attributes from the "first layer" (except the plotly_eval class)
   if (inherit) {
@@ -220,7 +220,8 @@ add_text <- function(p, x = NULL, y = NULL, z = NULL, text = NULL, ...,
 #' @inheritParams add_trace
 #' @rdname add_trace
 #' @export
-add_paths <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
+add_paths <- function(p, x = NULL, y = NULL, z = NULL, ...,
+                      data = NULL, inherit = TRUE) {
   v <- inherit(p, inherit, x = x, y = y, z = z)
   check_required(v, c("x", "y"), "Must supply `x` and `y` attributes")
   add_classed(p, "plotly_path", x = v$x, y = v$y, z = v$z, type = if (!is.null(v$z)) "scatter3d" else "scatter",
@@ -301,8 +302,11 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
   }
   dat <- plotly_data(add_data(p, data))
   if (!inherits(dat, "sf")) {
-    stop("The `data` for an `add_sf()` layer must be an sf object, not an object of class: ",
-         class(dat)[1], call. = FALSE)
+    stop(
+      "The `data` for an `add_sf()` layer must be an sf object, ", 
+      "not an object of class: ", class(dat)[1],
+      call. = FALSE
+    )
   }
   if (is_geo(p)) dat <- sf_crs(dat)
   bbox <- as.list(sf::st_bbox(dat))
@@ -386,7 +390,8 @@ add_area <- function(p, r = NULL, theta = NULL, t = NULL, ...,
 #' @inheritParams add_trace
 #' @rdname add_trace
 #' @export
-add_bars <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE) {
+add_bars <- function(p, x = NULL, y = NULL, ...,
+                     data = NULL, inherit = TRUE) {
   v <- inherit(p, inherit, x = x, y = y)
   check_required(v, c("x", "y"), "Must supply `x`/`y` attributes")
   add_classed(p, "plotly_bar", x = v$x, y = v$y, type = "bar", ..., data = data, inherit = inherit)
@@ -413,7 +418,8 @@ add_boxplot <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE)
 #' @inheritParams add_trace
 #' @rdname add_trace
 #' @export
-add_mesh <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
+add_mesh <- function(p, x = NULL, y = NULL, z = NULL, ..., 
+                     data = NULL, inherit = TRUE) {
   v <- inherit(p, inherit, x = x, y = y, z = z)
   check_required(v, c("x", "y", "z"), "Must supply `x`/`y`/`z` attributes")
   add_classed(p, "plotly_mesh", x = v$x, y = v$y, z = v$z, type = "mesh3d", ..., data = data, inherit = inherit)

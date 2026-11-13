@@ -36,10 +36,10 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
   }
   for (i in which(is_bar)[which]) {
     tr <- p$x$data[[i]]
-    z_color <- inherits(tr, "zcolor")
+    has_zcolor <- inherits(tr, "zcolor")
     if (!is.null(limits)) {
       limits <- sort(limits)
-      if (z_color) {
+      if (has_zcolor) {
         z <- p$x$data[[i]]$z
         z[z < limits[1] | limits[2] < z] <- NA
         p$x$data[[i]]$z <- z
@@ -64,8 +64,12 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
         })
       }
     }
-    if (z_color) p$x$data[[i]]$colorbar <- modify_list(tr$colorbar, list(...))
-    else p$x$data[[i]]$marker$colorbar <- modify_list(tr$marker$colorbar, list(...))
+    # pass along ... to the colorbar
+    if (has_zcolor) {
+      p$x$data[[i]]$colorbar <- modify_list(tr$colorbar, list(...))
+    } else {
+      p$x$data[[i]]$marker$colorbar <- modify_list(tr$marker$colorbar, list(...))
+    }
   }
   
   p
@@ -196,14 +200,18 @@ plotly_empty <- function(...) {
 raster2uri <- function(r, ...) {
   if (!requireNamespace("png", quietly = TRUE)) stop("raster2uri() needs the png package", call. = FALSE)
   if (inherits(r, "nativeRaster")) {
-    img <- r
+    # png::writePNG directly supports nativeRaster objects
+    png <- r
   } else {
     r <- grDevices::as.raster(r, ...)
     rgbs <- grDevices::col2rgb(c(r), alpha = TRUE) / 255
     nr <- dim(r)[1]
     nc <- dim(r)[2]
-    ch <- function(i) matrix(rgbs[i, ], nrow = nr, ncol = nc, byrow = TRUE)
-    img <- array(c(ch(1), ch(2), ch(3), ch(4)), dim = c(dim(r), 4))
+    reds <- matrix(rgbs[1, ], nrow = nr, ncol = nc, byrow = TRUE)
+    greens <- matrix(rgbs[2, ], nrow = nr, ncol = nc, byrow = TRUE)
+    blues <- matrix(rgbs[3, ], nrow = nr, ncol = nc, byrow = TRUE)
+    alphas <- matrix(rgbs[4, ], nrow = nr, ncol = nc, byrow = TRUE)
+    png <- array(c(reds, greens, blues, alphas), dim = c(dim(r), 4))
   }
-  paste0("data:image/png;base64,", base64enc::base64encode(png::writePNG(img)))
+  paste0("data:image/png;base64,", base64enc::base64encode(png::writePNG(png)))
 }

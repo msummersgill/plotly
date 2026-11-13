@@ -75,7 +75,7 @@ plotly_build <- function(p, registerFrames = TRUE) {
   
   # Attributes should be NULL if none exist (rather than an empty list)
   if (length(p$x$attrs) == 0) p$x$attrs <- NULL
-  # one (unevaluated) trace with sf data: add an sf layer
+  # If there is just one (unevaluated) trace, and the data is sf, add an sf layer
   if (length(p$x$attrs) == 1 && !inherits(p$x$attrs[[1]], "plotly_eval") && inherits(plotly_data(p), "sf")) {
     p <- add_sf(p)
   }
@@ -199,7 +199,9 @@ plotly_build <- function(p, registerFrames = TRUE) {
   # flags get passed onto frame data.
   p <- verify_key_type(p)
   p <- verify_config(p)
-  if (registerFrames) p <- registerFrames(p, frameMapping)
+  if (registerFrames) {
+    p <- registerFrames(p, frameMapping = frameMapping)
+  }
   p <- verify_guides(p)
   # box up 'data_array' attributes where appropriate
   p <- verify_attr_spec(p)
@@ -596,7 +598,9 @@ map_size <- function(traces, stroke = FALSE) {
   if (all(nSizes == 0)) return(traces)
   
   allSize <- unlist(compact(sizeList))
-  if (!is.null(allSize) && is_discrete(allSize)) stop("`size`/`width` values must be numeric .", call. = FALSE)
+  if (!is.null(allSize) && is_discrete(allSize)) {
+    stop("`size`/`width` values must be numeric .", call. = FALSE)
+  }
   sizeRange <- range(allSize, na.rm = TRUE)
   map_fn <- function(trace, sizes) {
     type <- trace$type %||l% "scatter"
@@ -831,6 +835,8 @@ map_color_scale <- function(traces, stroke = FALSE, title = "", colorway, na.col
     }
     if (any(has_z)) return(traces)
     if (stroke && sum(lengths(lapply(traces, `[[`, "stroke"))) == 0) return(traces)
+    
+    # add an "empty" trace with the colorbar
     obj$color <- rng
     obj$showscale <- default(TRUE)
     bar <- list(x = range_or_null(lapply(traces, `[[`, "x")),
@@ -1252,6 +1258,7 @@ map_linetype <- function(traces) {
     traces[[i]][["line"]] <- modify_list(
       list(dash = default(dashes)), traces[[i]][["line"]]
     )
+    # ensure the mode is set so that the linetype is relevant
     if (!grepl("lines", traces[[i]]$mode %||l% "")) {
       message("Adding lines to mode; otherwise linetype would have no effect.")
       traces[[i]][["mode"]] <- paste0(traces[[i]][["mode"]], "+lines")
