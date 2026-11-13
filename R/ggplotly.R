@@ -149,7 +149,7 @@ ggplotly.ggplot <- function(p = ggplot2::last_plot(), width = NULL,
   l <- gg2list(p, width = width, height = height, tooltip = tooltip, 
                dynamicTicks = dynamicTicks, layerData = layerData, 
                originalData = originalData, source = source, ...)
-  config(as_widget(l))
+  config(legacy_widget_lazy(l))
 }
 
 #' Convert a ggplot to a list.

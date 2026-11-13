@@ -261,8 +261,8 @@ test_that("can handle inconsistent # of traces across frames & supply default co
   expect_length(l$frames[[2]]$data, 3)
   
   # make sure the frames are targetting the right traces
-  expect_equivalent(l$frames[[1]]$traces, 0:2)
-  expect_equivalent(l$frames[[2]]$traces, 0:2)
+  expect_equivalent(as.integer(l$frames[[1]]$traces), 0:2)
+  expect_equivalent(as.integer(l$frames[[2]]$traces), 0:2)
   
   # 1st frame has all 3 traces visible; 2nd frame has 2 visible
   expect_true(
@@ -281,7 +281,7 @@ test_that("can handle inconsistent # of traces across frames & supply default co
   
   # ensure the animation defaults are supplied
   buttonArgs <- l$layout$updatemenus[[1]]$buttons[[1]]$args[[2]]
-  defaults <- animation_opts_defaults()
+  defaults <- lp_animation_defaults()
   expect_identical(
     buttonArgs[names(defaults)], defaults
   )
@@ -327,7 +327,7 @@ test_that("can change animation defaults", {
   
   # the expectation for animation option values
   aniOpts <- modify_list(
-    rapply(animation_opts_defaults(), unclass, how = "list"), 
+    rapply(lp_animation_defaults(), unclass, how = "list"), 
     list(
       frame = list(duration = 1200), 
       transition = list(duration = 1000, easing = "elastic")

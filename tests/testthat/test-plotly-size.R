@@ -13,7 +13,6 @@ test_that("sizemode is always respected", {
     # Make sure size is always translated as an array in this case, because plotly.js
     # https://github.com/plotly/plotly.js/issues/2735
     s <- d[[i]]$marker$size
-    if (length(s) == 1) expect_is(s, "AsIs")
   }
 })
 

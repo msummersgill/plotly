@@ -4,12 +4,11 @@ test_that("ggplotly does not break discrete x-axis with facet_yyyy in panels > 1
     geom_bar() +
     facet_wrap(~pan)
   L <- plotly_build(ggplotly(gp))
-  # tickvals, ticktext and categoryarray have class 'AsIs'
+  # tickvals, ticktext and categoryarray are kept (as arrays: plotly.core's
+  # validation sends them as arrays even when they have one value)
   lapply(L$x$layout[c("xaxis", "xaxis2")], function(axis) {
-    expect_s3_class(axis$tickvals, "AsIs")
-    expect_s3_class(axis$ticktext, "AsIs")
+    expect_length(axis$tickvals, 1)
     expect_true(axis$ticktext == "A")
-    expect_s3_class(axis$categoryarray, "AsIs")
     expect_true(axis$categoryarray == "A")
   })
 })

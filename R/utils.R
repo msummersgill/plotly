@@ -931,22 +931,6 @@ verify_guides <- function(p) {
   p
 }
 
-verify_mathjax <- function(p) {
-  hasMathjax <- "mathjax" %in% sapply(p$dependencies, "[[", "name")
-  if (hasMathjax) return(p)
-  
-  hasTeX <- any(rapply(p$x, is.TeX))
-  if (!hasTeX) return(p)
-  
-  # TODO: it would be much better to add the dependency here, but
-  # htmlwidgets doesn't currently support adding dependencies at print-time!
-  warning(
-    "Detected the use of `TeX()`, but mathjax has not been specified. ",
-    "Try running `config(.Last.value, mathjax = 'cdn')`",
-    call. = FALSE
-  )
-  p
-}
 
 has_marker <- function(types, modes) {
   is_scatter <- grepl("scatter", types)
@@ -1099,23 +1083,7 @@ get_kwargs <- function() {
   c("filename", "fileopt", "style", "traces", "layout", "frames", "world_readable")
 }
 
-# "common" POST header fields
-api_headers <- function() {
-  v <- as.character(get_package_version("plotly"))
-  httr::add_headers(
-    plotly_version = v,
-    `Plotly-Client-Platform` = paste("R", v),
-    `Content-Type` = "application/json",
-    Accept = "*/*"
-  )
-}
 
-api_auth <- function() {
-  httr::authenticate(
-    verify("username"),
-    verify("api_key")
-  )
-}
 
 
 # try to write environment variables to an .Rprofile

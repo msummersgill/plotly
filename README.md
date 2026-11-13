@@ -34,6 +34,13 @@ Or install the latest development version (on GitHub) via `{remotes}`:
 remotes::install_github("plotly/plotly")
 ```
 
+The development version renders plots with the
+[plotly.core](https://github.com/msummersgill/plotly.R.core) package (which
+`remotes` installs with it): it bundles a current plotly.js, encodes numeric
+data as typed arrays, and provides `go_*()` graph objects and `px_*()`
+Plotly Express functions. Use `legacy_figure()` to turn a `plot_ly()` plot
+into a plotly.core figure.
+
 ## Getting started
 
 ### Web-based ggplot2 graphics

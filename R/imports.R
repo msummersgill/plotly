@@ -1,12 +1,9 @@
-#' @import ggplot2
 #' @importFrom grDevices col2rgb extendrange dev.list dev.off rgb as.raster
-#' @importFrom graphics layout
 #' @importFrom utils getFromNamespace modifyList data packageVersion browseURL str file.edit
 #' @importFrom stats setNames complete.cases quantile is.leaf
 #' @importFrom tidyr unnest
 #' @importFrom viridisLite viridis
 #' @importFrom jsonlite toJSON parse_json read_json
-#' @importFrom httr RETRY content config add_headers authenticate stop_for_status warn_for_status write_disk
 #' @importFrom htmlwidgets createWidget sizingPolicy saveWidget onRender prependContent
 #' @importFrom tibble as_tibble
 #' @importFrom htmltools browsable tagList tags div

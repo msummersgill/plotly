@@ -1,3 +1,37 @@
+# plotly (development version)
+
+## plotly.core backend
+
+* plotly now builds on the plotly.core package, which bundles plotly.js 4,
+  renders plots (with numeric data sent as base64 typed arrays, encoded in C)
+  and provides the Shiny integration (`plotlyOutput()`, `renderPlotly()`,
+  `event_data()`, `plotlyProxy()`), `config()` and `save_image()`. These are
+  re-exported, so existing code keeps working. `plot_ly()` plots are
+  validated against the plotly.js schema when rendered: invalid attributes
+  are dropped with a warning. `legacy_figure()` converts a plot to a
+  plotly.core `go_figure()`, and with plotly.core attached, its `add_*()`
+  functions (e.g. `add_bar()`, `add_violin()`) also work on `plot_ly()` plots.
+
+* Features plotly.js has removed are upgraded when a plot is built: Mapbox
+  traces and `layout.mapbox` become their MapLibre `map` equivalents (no
+  access token needed), `heatmapgl` becomes `heatmap`, legacy polar charts
+  (`r`/`t`) become `scatterpolar`, `titlefont`/`titleside` move into
+  `title`, and trace `transforms` (filter, groupby, aggregate, sort) are
+  applied in R (so buttons that restyle a transform have no effect).
+  `config()` ignores `mapboxAccessToken` and the Chart Studio options.
+
+## Breaking changes
+
+* Requires R 4.1.
+* Chart Studio functions (`api_create()`, `api_download_plot()`,
+  `api_download_grid()`, `api()`, `signup()`, `plotly_POST()`,
+  `get_figure()`, `plotly_IMAGE()`, `plotly()`) are defunct: Chart Studio's
+  API has been retired.
+* `orca()` and `export()` are deprecated and use `save_image()` (Kaleido);
+  `orca_serve()` is defunct. `partial_bundle()` and
+  `remove_typedarray_polyfill()` are deprecated and return the plot
+  unchanged.
+
 # plotly 4.12.1
 
 * Completed the `plot_ly()` documentation for what happens when `type` is not

@@ -42,7 +42,7 @@ test_that("Partial update works as expected", {
     marker = list(line = list(color = "red", width = 20))
   )
   
-  trace_new <- trace_replace(trace, c("marker", "line"), list(width = 10))
+  trace_new <- lp_set_path_value(trace, c("marker", "line"), list(width = 10))
   trace$marker$line <- list(width = 10)
   expect_equal(trace_new, trace)
   
@@ -51,7 +51,7 @@ test_that("Partial update works as expected", {
     y = 6:10,
     marker = list(line = list(color = "red", width = 20))
   )
-  trace_new <- trace_replace(trace, c("marker", "line", "width"), 10)
+  trace_new <- lp_set_path_value(trace, c("marker", "line", "width"), 10)
   trace$marker$line$width <- 10
   expect_equal(trace_new, trace)
   
@@ -59,7 +59,7 @@ test_that("Partial update works as expected", {
     x = 1:5,
     y = 6:10
   )
-  trace_new <- trace_replace(trace, c("marker", "line", "width"), 10)
+  trace_new <- lp_set_path_value(trace, c("marker", "line", "width"), 10)
   trace$marker$line$width <- 10
   expect_equal(trace_new, trace)
 })
