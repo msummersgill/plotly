@@ -19,7 +19,7 @@
 #' df <- data.frame(x = rep(1:5, 3), y = runif(15), t = rep(1:3, each = 5))
 #' df |> plot_ly(x = ~x, y = ~y, frame = ~t) |> animation_opts(1000, easing = "elastic")
 animation_opts <- function(p, frame = 500, transition = frame, easing = "linear", redraw = TRUE, mode = "immediate") {
-  p$animation <- lp_animation_format(frame, transition, easing, redraw, mode)
+  p$animation <- animation_format(frame, transition, easing, redraw, mode)
   p
 }
 
@@ -34,7 +34,7 @@ animation_slider <- function(p, hide = FALSE, ...) {
     return(p)
   }
   i <- which(is_slider)
-  p$x$layout$sliders[[i]] <- structure(lp_modify_list(unclass(p$x$layout$sliders[[i]]), list(...)), class = "aniSlider")
+  p$x$layout$sliders[[i]] <- structure(modify_list(unclass(p$x$layout$sliders[[i]]), list(...)), class = "aniSlider")
   p
 }
 
@@ -45,33 +45,33 @@ animation_button <- function(p, ..., label) {
   p <- plotly_build(p)
   i <- which(vapply(p$x$layout$updatemenus, function(s) inherits(s, "aniButton"), logical(1)))
   if (!missing(label)) p$x$layout$updatemenus[[i]]$buttons[[1]]$label <- label
-  p$x$layout$updatemenus[[i]] <- structure(lp_modify_list(unclass(p$x$layout$updatemenus[[i]]), list(...)), class = "aniButton")
+  p$x$layout$updatemenus[[i]] <- structure(modify_list(unclass(p$x$layout$updatemenus[[i]]), list(...)), class = "aniButton")
   p
 }
 
 
-lp_animation_button_supply <- function(p) {
+animation_button_supply <- function(p) {
   menus <- p$x$layout$updatemenus
   is_btn <- vapply(menus, function(s) inherits(s, "aniButton"), logical(1))
   idx <- if (sum(is_btn) == 1) which(is_btn) else length(menus) + 1
-  opts <- p$animation %||l% lp_animation_defaults()
+  opts <- p$animation %||l% animation_defaults()
   p$x$layout$updatemenus[[idx]] <- structure(list(
     type = "buttons", direction = "right", showactive = FALSE, y = 0, x = 0, yanchor = "top", xanchor = "right",
     pad = list(t = 60, r = 5),
     buttons = list(list(label = "Play", method = "animate",
-                        args = list(NULL, lp_modify_list(list(fromcurrent = TRUE, mode = "immediate"), opts))))
+                        args = list(NULL, modify_list(list(fromcurrent = TRUE, mode = "immediate"), opts))))
   ), class = "aniButton")
   p
 }
 
 
-lp_animation_slider_supply <- function(p, ...) {
+animation_slider_supply <- function(p, ...) {
   sliders <- p$x$layout$sliders
   is_slider <- vapply(sliders, function(s) inherits(s, "aniSlider"), logical(1))
   idx <- if (sum(is_slider) == 1) which(is_slider) else length(sliders) + 1
-  opts <- p$animation %||l% lp_animation_defaults()
+  opts <- p$animation %||l% animation_defaults()
   steps <- lapply(p$x$frames, function(f) list(method = "animate", args = list(list(f$name), opts), label = f$name, value = f$name))
-  slider <- lp_modify_list(if (any(is_slider)) unclass(sliders[[which(is_slider)]]) else list(), compact(list(...)))
+  slider <- modify_list(if (any(is_slider)) unclass(sliders[[which(is_slider)]]) else list(), compact(list(...)))
   slider$steps <- steps
   slider$visible <- slider$visible %||l% TRUE
   slider$pad$t <- slider$pad[["t"]] %||l% 40

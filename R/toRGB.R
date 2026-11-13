@@ -17,11 +17,11 @@ toRGB <- function(x, alpha = 1) {
   if (length(x) == 0) return(x)
   if (any(x %in% "transparent")) return(x)
   if (length(x) != length(alpha)) {
-    alpha <- lp_uniq(alpha)
+    alpha <- uniq(alpha)
     if (length(x) != length(alpha) && length(alpha) != 1) stop("alpha must be of length 1 or the same length as x", call. = FALSE)
   }
   idx <- grepl("^rgba\\(", x) & alpha <= 1 & 0 <= alpha
-  if (any(idx)) x[idx] <- lp_rgb2hex(x[idx])
+  if (any(idx)) x[idx] <- rgb2hex(x[idx])
   if (is.character(x)) x[x == "NA"] <- NA
   alpha[is.na(alpha)] <- 1
   m <- grDevices::col2rgb(x, alpha = TRUE)
@@ -47,7 +47,7 @@ showRGB <- function(x, ...) {
   invisible(x)
 }
 
-lp_rgb2hex <- function(string) {
+rgb2hex <- function(string) {
   vapply(strsplit(sub("rgba\\(", "", sub("\\)", "", string)), ","), function(v) {
     v <- as.numeric(v)
     grDevices::rgb(v[1], v[2], v[3], v[4] * 255, maxColorValue = 255)

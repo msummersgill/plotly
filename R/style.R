@@ -24,7 +24,7 @@ style <- function(p, ..., traces = NULL) {
   if (any(idx > n)) warning("You've referenced non-existent traces", call. = FALSE)
   paths <- strsplit(names(vals), ".", fixed = TRUE)
   p$x$data[idx] <- lapply(p$x$data[idx], function(tr) {
-    for (k in seq_along(paths)) tr <- lp_set_path_value(tr, paths[[k]], vals[[k]])
+    for (k in seq_along(paths)) tr <- set_path_value(tr, paths[[k]], vals[[k]])
     tr
   })
   p

@@ -25,13 +25,13 @@ NULL
 #' @rdname plotly-deprecated
 #' @export
 orca <- function(p, file = "plot.png", format = tools::file_ext(file), scale = NULL, width = NULL, height = NULL, ...) {
-  lp_deprecated("orca", "use save_image() (needs Kaleido) instead.")
+  deprecated("orca", "use save_image() (needs Kaleido) instead.")
   if (!identical(tolower(format), tolower(tools::file_ext(file)))) file <- paste0(tools::file_path_sans_ext(file), ".", format)
   save_image(p, file, width = width, height = height, scale = scale)
 }
 
 #' @rdname plotly-deprecated
 #' @export
-orca_serve <- function(...) lp_defunct("orca_serve", "orca is no longer supported; use save_image() instead.")
+orca_serve <- function(...) defunct("orca_serve", "orca is no longer supported; use save_image() instead.")
 
 

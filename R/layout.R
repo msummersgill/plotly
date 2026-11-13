@@ -41,7 +41,7 @@ layout.plotly <- function(p, ..., data = NULL) {
 #' @return The modified plot.
 #' @export
 rangeslider <- function(p, start = NULL, end = NULL, ...) {
-  rng <- if (!is.null(start) || !is.null(end)) list(lp_to_ms(start), lp_to_ms(end))
+  rng <- if (!is.null(start) || !is.null(end)) list(to_milliseconds(start), to_milliseconds(end))
   if (inherits(p, "go_figure")) {
     patch <- c(list(rangeslider = c(list(visible = TRUE), list(...))), if (!is.null(rng)) list(range = rng))
     return(update_xaxes(p, patch))
@@ -56,7 +56,7 @@ rangeslider <- function(p, start = NULL, end = NULL, ...) {
 # plotly.js no longer has: `collaborate` and `cloud` warn as before, options
 # of removed features (Mapbox, Chart Studio links, global transforms) are
 # ignored, and other unknown options are dropped with a warning when the
-# plot is built (lp_verify_config()), as plotly.js ignored them.
+# plot is built (verify_config()), as plotly.js ignored them.
 LP_REMOVED_CONFIG <- c("mapboxAccessToken", "showLink", "linkText", "sendData", "showSources",
                        "showEditInChartStudio", "globalTransforms", "collaborate")
 
@@ -79,7 +79,7 @@ config.plotly <- function(p, ..., cloud = FALSE, showSendToCloud = cloud) {
   p
 }
 
-lp_verify_config <- function(p) {
+verify_config <- function(p) {
   bad <- setdiff(names(p$x$config), names(schema(jsonedit = FALSE)$config))
   for (b in bad) {
     warning("'", b, "' is not a valid config attribute and will be ignored (see plotly.core::schema()$config)", call. = FALSE)

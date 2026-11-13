@@ -5,7 +5,7 @@
 # (each data frame has at most one geometry type).
 
 # Longitude/latitude (WGS84) coordinates, as needed by geo and map traces.
-lp_sf_crs <- function(x) {
+sf_crs <- function(x) {
   crs <- sf::st_crs(x)
   if (is.na(crs)) {
     warning("Missing coordinate reference system (crs). Defaulting to EPSG:4326", call. = FALSE)
@@ -27,7 +27,7 @@ LP_SF_TYPES <- c(
 
 # One data frame of coordinates per geometry kind (polygon, path, point),
 # each holding the features' other columns.
-lp_sf_basic <- function(data) {
+sf_basic <- function(data) {
   data <- sf::st_as_sf(data)
   geom_type <- as.character(sf::st_geometry_type(data))
   # expand collections into one row per feature
@@ -38,13 +38,13 @@ lp_sf_basic <- function(data) {
   kind <- LP_SF_TYPES[geom_type]
   kinds <- intersect(c("path", "point", "polygon"), kind)
   stats_named(lapply(kinds, function(k) {
-    structure(lp_fortify_sf(data[kind %in% k, ]), sf_kind = k)
+    structure(fortify_sf(data[kind %in% k, ]), sf_kind = k)
   }), kinds)
 }
 
 # Coordinates of identical geometries joined with the feature data. Lines
 # and polygons are grouped by the feature and ring ids (l1, l2, l3).
-lp_fortify_sf <- function(model) {
+fortify_sf <- function(model) {
   coords <- sf::st_coordinates(sf::st_geometry(model))
   colnames(coords) <- tolower(colnames(coords))
   lcols <- grep("^l", colnames(coords))
@@ -68,11 +68,14 @@ lp_fortify_sf <- function(model) {
     attr(d, "plotly_groups") <- "group"
   }
   attr(d, "set") <- set
+  # a data frame (with the attributes above), as ggplotly() expects
+  attrs <- list(set = attr(d, "set"), plotly_groups = attr(d, "plotly_groups"))
+  d <- as.data.frame(d)
+  for (a in names(attrs)) if (!is.null(attrs[[a]])) attr(d, a) <- attrs[[a]]
   d
 }
 
-
-lp_sf_default_attrs <- function(d) {
+sf_default_attrs <- function(d) {
   switch(attr(d, "sf_kind"),
     polygon = list(mode = "lines", fill = "toself"),
     path = list(mode = "lines"),
@@ -82,18 +85,18 @@ lp_sf_default_attrs <- function(d) {
 
 # Build step: initial view from the sf layers' bounding boxes (map view,
 # geo lon/lat ranges, or equal-aspect cartesian axes without grids).
-lp_fit_bounds <- function(p) {
+fit_bounds <- function(p) {
   if (!any(vapply(p$x$data, function(tr) !is.null(tr[["_bbox"]]), logical(1)))) return(p)
   traces_on <- function(attr, id) lapply(p$x$data, function(tr) if (identical(id, tr[[attr]])) tr[["_bbox"]])
   for (id in unique(grep("^map", unlist(lapply(p$x$data, `[[`, "subplot")), value = TRUE))) {
-    rng <- lp_bboxes2range(traces_on("subplot", id), f = 0.01)
+    rng <- bboxes2range(traces_on("subplot", id), f = 0.01)
     if (!length(rng)) next
     p$x$fitBounds[[id]] <- I(c(min(rng$xrng), min(rng$yrng), max(rng$xrng), max(rng$yrng)))
     p$x$layout[[id]]$center$lat <- p$x$layout[[id]]$center$lat %||l% mean(rng$yrng)
     p$x$layout[[id]]$center$lon <- p$x$layout[[id]]$center$lon %||l% mean(rng$xrng)
   }
   for (id in unique(grep("^geo", unlist(lapply(p$x$data, `[[`, "geo")), value = TRUE))) {
-    rng <- lp_bboxes2range(traces_on("geo", id), f = 0.01)
+    rng <- bboxes2range(traces_on("geo", id), f = 0.01)
     if (!length(rng)) next
     p$x$layout[[id]]$lataxis$range <- rng$yrng
     p$x$layout[[id]]$lonaxis$range <- rng$xrng
@@ -103,13 +106,13 @@ lp_fit_bounds <- function(p) {
     bboxes <- lapply(p$x$data, function(tr) {
       if (identical(r[[1]], tr[["xaxis"]]) && identical(r[[2]], tr[["yaxis"]])) tr[["_bbox"]]
     })
-    rng <- lp_bboxes2range(bboxes, f = 0.01)
+    rng <- bboxes2range(bboxes, f = 0.01)
     if (!length(rng)) next
     xname <- sub("x", "xaxis", r[[1]])
     yname <- sub("y", "yaxis", r[[2]])
     eaxis <- list(showgrid = FALSE, zeroline = FALSE, ticks = "", showticklabels = FALSE)
-    p$x$layout[[xname]] <- lp_modify_list(eaxis, p$x$layout[[xname]])
-    p$x$layout[[yname]] <- lp_modify_list(eaxis, p$x$layout[[yname]])
+    p$x$layout[[xname]] <- modify_list(eaxis, p$x$layout[[xname]])
+    p$x$layout[[yname]] <- modify_list(eaxis, p$x$layout[[yname]])
     p$x$layout[[xname]]$title <- p$x$layout[[xname]]$title %|D|% NULL
     p$x$layout[[yname]]$title <- p$x$layout[[yname]]$title %|D|% NULL
     p$x$layout[[xname]]$scaleanchor <- r[[2]]
@@ -118,19 +121,10 @@ lp_fit_bounds <- function(p) {
   p
 }
 
-lp_bboxes2range <- function(bboxes, ...) {
+bboxes2range <- function(bboxes, ...) {
   if (sum(lengths(bboxes)) == 0) return(NULL)
   get <- function(k) unlist(lapply(bboxes, `[[`, k))
   list(yrng = grDevices::extendrange(range(get("ymin"), get("ymax"), na.rm = TRUE), ...),
        xrng = grDevices::extendrange(range(get("xmin"), get("xmax"), na.rm = TRUE), ...))
 }
-
-fortify_sf <- function(model, ...) {
-  d <- lp_fortify_sf(model)
-  set <- attr(d, "set")
-  d <- as.data.frame(d)
-  attr(d, "set") <- set
-  d
-}
-
 

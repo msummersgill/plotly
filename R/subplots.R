@@ -37,13 +37,13 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
   }
   plots <- lapply(plots, function(p) {
     if (inherits(p, "go_figure")) {
-      p <- lp_plain_value(unclass(p)[c("data", "layout")])
+      p <- plain_value(unclass(p)[c("data", "layout")])
       # the result is a plot_ly() object: use its default margins, not plotly.js's
       p$layout$margin <- p$layout$margin %||l% LP_MARGIN
       # go traces leave their default axes out; name them so they are renumbered
       for (i in seq_along(p$data)) {
         tr <- p$data[[i]]
-        if (lp_has_attr(tr[["type"]] %||l% "scatter", "xaxis")) {
+        if (has_attr(tr[["type"]] %||l% "scatter", "xaxis")) {
           p$data[[i]][["xaxis"]] <- tr[["xaxis"]] %||l% "x"
           p$data[[i]][["yaxis"]] <- tr[["yaxis"]] %||l% "y"
         }
@@ -122,8 +122,8 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
   y_new <- paste0(sub("[0-9]+$", "", y_cur), sub("^1$", "", y_id))
   x_map <- split(stats_named(x_cur, x_new), rep(seq_along(plots), nx))
   y_map <- split(stats_named(y_cur, y_new), rep(seq_along(plots), ny))
-  dom <- lp_get_domains(length(plots), nrows, margin, widths = widths, heights = heights)
-  rescale_dom <- function(old, new) sort(lp_rescale(unlist(old %||l% c(0, 1)), new, from = c(0, 1)))
+  dom <- get_domains(length(plots), nrows, margin, widths = widths, heights = heights)
+  rescale_dom <- function(old, new) sort(rescale(unlist(old %||l% c(0, 1)), new, from = c(0, 1)))
 
   for (i in seq_along(plots)) {
     xm <- x_map[[i]]
@@ -174,34 +174,30 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
     x_axes[[i]] <- lapply(x_axes[[i]], fix, main = xd)
     y_axes[[i]] <- lapply(y_axes[[i]], fix, main = yd)
   }
-  out <- list(data = unlist(traces, recursive = FALSE), layout = Reduce(lp_modify_list, c(x_axes, rev(y_axes))))
+  out <- list(data = unlist(traces, recursive = FALSE), layout = Reduce(modify_list, c(x_axes, rev(y_axes))))
   rows <- split(dom, seq_along(plots))
-  out$layout$annotations <- unlist(Map(lp_reposition, annotations, rows), recursive = FALSE)
-  out$layout$shapes <- unlist(Map(lp_reposition, shapes, rows), recursive = FALSE)
-  out$layout$images <- unlist(Map(lp_reposition, images, rows), recursive = FALSE)
+  out$layout$annotations <- unlist(Map(reposition, annotations, rows), recursive = FALSE)
+  out$layout$shapes <- unlist(Map(reposition, shapes, rows), recursive = FALSE)
+  out$layout$images <- unlist(Map(reposition, images, rows), recursive = FALSE)
   other <- lapply(layouts, function(l) l[!grepl("^[x-y]axis|^geo[0-9]*$|^map[0-9]*$|annotations|shapes|images", names(l))])
   if (!identical(which_layout, "merge")) other <- other[which_layout[which_layout %in% seq_along(plots)]]
-  out$layout <- Reduce(lp_modify_list, other, out$layout)
+  out$layout <- Reduce(modify_list, other, out$layout)
   for (k in c("source", "config", "shinyEvents", "highlight", "selectize")) {
     vals <- compact(lapply(plots, `[[`, k))
     if (length(vals)) out[[k]] <- vals[[length(vals)]]
   }
   cw <- out$layout$colorway %||l% LP_COLORWAY
-  out$data <- lp_colorway_retrain(out$data, rep(cw, length.out = length(out$data)))
+  out$data <- colorway_retrain(out$data, rep(cw, length.out = length(out$data)))
   out$subplot <- TRUE
   out$attrs <- list()
   legacy_widget_lazy(out)
 }
 
-# Names used by the ggplotly() code
-get_domains <- function(...) lp_get_domains(...)
-
 # ----------------------------------------------------------------
 # Functions used solely within subplot()
 # ----------------------------------------------------------------
 
-
-lp_get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL, heights = NULL) {
+get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL, heights = NULL) {
   if (length(margins) == 1) margins <- rep(margins, 4)
   if (length(margins) != 4) stop("margins must be length 1 or 4", call. = FALSE)
   ncols <- ceiling(nplots / nrows)
@@ -227,8 +223,7 @@ lp_get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL,
   as.data.frame(do.call(rbind, Map(c, xz, ys)))
 }
 
-
-lp_reposition <- function(obj, domains) {
+reposition <- function(obj, domains) {
   xd <- as.numeric(domains[c("xstart", "xend")])
   yd <- as.numeric(domains[c("yend", "ystart")])
   for (i in seq_along(obj)) {
@@ -237,25 +232,24 @@ lp_reposition <- function(obj, domains) {
       if (is.numeric(o$sizex)) obj[[i]]$sizex <- o$sizex * abs(diff(xd))
       if (identical(o$xsizemode, "pixel")) "xanchor" else c("x", "x0", "x1")
     }
-    for (j in xs) if (is.numeric(o[[j]])) obj[[i]][[j]] <- lp_rescale(o[[j]], xd, from = c(0, 1))
+    for (j in xs) if (is.numeric(o[[j]])) obj[[i]][[j]] <- rescale(o[[j]], xd, from = c(0, 1))
     ys <- if (identical(o$yref, "paper")) {
       if (is.numeric(o$sizey)) obj[[i]]$sizey <- o$sizey * abs(diff(yd))
       if (identical(o$ysizemode, "pixel")) "yanchor" else c("y", "y0", "y1")
     }
-    for (j in ys) if (is.numeric(o[[j]])) obj[[i]][[j]] <- lp_rescale(o[[j]], yd, from = c(0, 1))
+    for (j in ys) if (is.numeric(o[[j]])) obj[[i]][[j]] <- rescale(o[[j]], yd, from = c(0, 1))
   }
   obj
 }
 
-
 # Re-assign colorway colors (marked by the build step) after combining plots.
-lp_colorway_retrain <- function(traces, colorway) {
+colorway_retrain <- function(traces, colorway) {
   for (i in seq_along(traces)) {
     col <- colorway[[i]]
     retrain <- function(x) {
       if (inherits(x, "colorway")) {
-        alpha <- as.numeric(grDevices::col2rgb(lp_rgb2hex(x), alpha = TRUE)["alpha", ] / 255)
-        lp_prefix_class(lp_default(toRGB(col, alpha)), "colorway")
+        alpha <- as.numeric(grDevices::col2rgb(rgb2hex(x), alpha = TRUE)["alpha", ] / 255)
+        prefix_class(default(toRGB(col, alpha)), "colorway")
       } else if (is.list(x) && !is.data.frame(x)) {
         cls <- oldClass(x)
         x <- lapply(x, retrain)
@@ -267,5 +261,4 @@ lp_colorway_retrain <- function(traces, colorway) {
   }
   traces
 }
-
 

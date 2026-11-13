@@ -11,6 +11,6 @@ test_that("remove_class() can remove 'AsIs' class", {
 
 test_that("default() doesn't change to_JSON() behavior", {
   x <- 1:10
-  expect_equivalent(to_JSON(default(x)), to_JSON(x))
+  expect_equivalent(plotly.core:::to_JSON(default(x)), plotly.core:::to_JSON(x))
 })
 

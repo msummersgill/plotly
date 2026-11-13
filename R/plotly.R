@@ -44,7 +44,7 @@ plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors =
                     stroke, strokes = NULL, alpha_stroke = 1, size, sizes = c(10, 100), span, spans = c(1, 20),
                     symbol, symbols = NULL, linetype, linetypes = NULL, split, frame,
                     width = NULL, height = NULL, source = "A") {
-  if (!is.data.frame(data) && !lp_is_shared(data)) {
+  if (!is.data.frame(data) && !is_shared(data)) {
     stop("First argument, `data`, must be a data frame or crosstalk::SharedData object.", call. = FALSE)
   }
   attrs <- list(...)
@@ -72,7 +72,7 @@ plot_ly <- function(data = data.frame(), ..., type = NULL, name, color, colors =
   attrs$symbols <- symbols
   attrs$linetypes <- linetypes
   attrs$type <- type
-  id <- lp_new_id()
+  id <- new_id()
   vis <- data
   x <- list(
     visdat = stats_named(list(function() vis), id),
@@ -107,23 +107,23 @@ legacy_widget_lazy <- function(x) {
 plot_mapbox <- function(data = data.frame(), ...) {
   p <- plot_ly(data, ...)
   p$x$layout$mapType <- "map"
-  lp_geo2cartesian(p)
+  geo2cartesian(p)
 }
 
-lp_add_classed <- function(p, class, ...) {
+add_classed <- function(p, class, ...) {
   p <- add_trace.plotly(p, ...)
   n <- length(p$x$attrs)
-  p$x$attrs[[n]] <- lp_prefix_class(p$x$attrs[[n]], class)
+  p$x$attrs[[n]] <- prefix_class(p$x$attrs[[n]], class)
   p
 }
 
-lp_inherit <- function(p, inherit, ...) {
+inherit <- function(p, inherit, ...) {
   vals <- list(...)
   if (inherit) for (k in names(vals)) vals[k] <- list(vals[[k]] %||l% p$x$attrs[[1]][[k]])
   vals
 }
 
-lp_require <- function(vals, needed, msg) {
+check_required <- function(vals, needed, msg) {
   if (any(vapply(vals[needed], is.null, logical(1)))) stop(msg, call. = FALSE)
 }
 
@@ -136,7 +136,7 @@ LP_POSITIONAL <- list(histogram = c("x", "y"), histogram2d = c("x", "y", "z"), h
 # Methods for plotly.core's add_<type>() generics (add_bar(), add_heatmap(),
 # ...): unnamed arguments are positional, as in the legacy add_<type>()
 # functions, and some types check their data attributes.
-lp_add_method <- function(type) {
+add_method <- function(type) {
   force(type)
   function(fig, ...) legacy_add_dispatch(type, fig, list(...))
 }
@@ -144,7 +144,7 @@ lp_add_method <- function(type) {
 # add_<type>() methods for plot_ly() objects, for every trace type
 # (plotly.core's add_bar(), add_heatmap(), ... generics).
 for (.type in plotly.core::available_trace_types()) {
-  assign(paste0("add_", .type, ".plotly"), lp_add_method(.type))
+  assign(paste0("add_", .type, ".plotly"), add_method(.type))
 }
 rm(.type)
 
@@ -188,19 +188,19 @@ legacy_add_dispatch <- function(type, p, dots) {
       if (rn) hv <- c(list(""), hv)
       cv <- unname(as.list(dat))
       if (rn) cv <- c(list(row.names(dat)), cv)
-      args$header <- lp_modify_list(list(values = hv, align = "right"), args$header)
-      args$cells <- lp_modify_list(list(values = cv, align = "right"), args$cells)
+      args$header <- modify_list(list(values = hv, align = "right"), args$header)
+      args$cells <- modify_list(list(values = cv, align = "right"), args$cells)
     }
     args$rownames <- NULL
   }
-  do.call(lp_add_classed, c(list(p = p, class = paste0("plotly_", type), type = type), args,
+  do.call(add_classed, c(list(p = p, class = paste0("plotly_", type), type = type), args,
                             list(data = data, inherit = inherit)))
 }
 
 #' @export
 layout.go_figure <- function(p, ..., data = NULL) update_layout(p, ...)
 
-lp_to_ms <- function(x) {
+to_milliseconds <- function(x) {
   if (inherits(x, "Date")) return(as.numeric(x) * 86400000)
   if (inherits(x, "POSIXt")) return(as.numeric(x) * 1000)
   x
@@ -212,7 +212,7 @@ LP_EASINGS <- c("linear", "quad", "cubic", "sin", "exp", "circle", "elastic", "b
                 "linear-in-out", "quad-in-out", "cubic-in-out", "sin-in-out", "exp-in-out", "circle-in-out",
                 "elastic-in-out", "back-in-out", "bounce-in-out")
 
-lp_animation_format <- function(frame, transition, easing, redraw, mode) {
+animation_format <- function(frame, transition, easing, redraw, mode) {
   if (frame < 0) stop("frame must be non-negative.", call. = FALSE)
   if (transition < 0) stop("transition must be non-negative.", call. = FALSE)
   if (frame < transition) stop("frame must be a value larger than transition (it includes the transition)", call. = FALSE)
@@ -221,22 +221,24 @@ lp_animation_format <- function(frame, transition, easing, redraw, mode) {
   list(transition = list(duration = transition, easing = easing), frame = list(duration = frame, redraw = redraw), mode = mode)
 }
 
-lp_animation_defaults <- function() {
-  lp_animation_format(lp_default(500), lp_default(500), lp_default("linear"), lp_default(TRUE), lp_default("immediate"))
+animation_defaults <- function() {
+  animation_format(default(500), default(500), default("linear"), default(TRUE), default("immediate"))
 }
 
 # Remove the build step's internal classes (defaults, colorway markers, trace
 # classes) so values can be validated.
-lp_strip <- function(x) {
+strip <- function(x) {
   if (is.list(x) && !is.data.frame(x)) {
     x <- unclass(x)
     attr(x, "titles") <- NULL
-    x[] <- lapply(x, lp_strip)
+    x[] <- lapply(x, strip)
     return(x)
   }
   if (!is.null(oldClass(x))) {
     keep <- setdiff(oldClass(x), c("plotly_default", "colorway", "plotly_eval", "aniSlider", "aniButton",
-                                   "numeric", "integer", "character", "logical", "double", "list"))
+                                   "numeric", "integer", "character", "logical", "double", "list",
+                                   # ggplot2's vctrs classes for scaled aesthetics (e.g. bar widths)
+                                   "mapped_discrete", "mapped_continuous", "vctrs_vctr"))
     oldClass(x) <- if (length(keep)) keep else NULL
   }
   x
@@ -258,11 +260,13 @@ lp_strip <- function(x) {
 #' fig <- plotly.core::update_traces(fig, marker_size = 10)
 legacy_figure <- function(p) {
   b <- plotly_build(p)
-  x <- lp_extract_keys(lp_strip(b$x))
+  x <- extract_keys(strip(b$x))
+  # ggplotly()'s internal marker for axis-title annotations (see subplot())
+  x$layout$annotations <- lapply(x$layout$annotations, function(a) { a$annotationType <- NULL; a })
   # ggplot2 themes give font families of "" (the default font), which
   # plotly.js ignored
-  x[c("data", "layout", "frames")] <- lp_drop_blank_family(x[c("data", "layout", "frames")])
-  x[c("data", "frames")] <- lp_matrix_colorscales(x[c("data", "frames")])
+  x[c("data", "layout", "frames")] <- drop_blank_family(x[c("data", "layout", "frames")])
+  x[c("data", "frames")] <- matrix_colorscales(x[c("data", "frames")])
   x$layout$mapType <- NULL
   if (is.null(x$layout$template)) x$layout$template <- get_template("none")
   fig <- tryCatch(go_figure(x$data, x$layout, x$frames %||l% NULL), error = function(e) {
@@ -276,20 +280,20 @@ legacy_figure <- function(p) {
 }
 
 # colorscales given as (value, color) matrices, as lists of pairs
-lp_matrix_colorscales <- function(x) {
+matrix_colorscales <- function(x) {
   if (!is.list(x)) return(x)
   cs <- x[["colorscale"]]
   if (is.matrix(cs) && ncol(cs) == 2) {
     x[["colorscale"]] <- Map(function(v, c) list(v, c), as.numeric(cs[, 1]), as.character(cs[, 2]))
   }
-  x[] <- lapply(x, lp_matrix_colorscales)
+  x[] <- lapply(x, matrix_colorscales)
   x
 }
 
-lp_drop_blank_family <- function(x) {
+drop_blank_family <- function(x) {
   if (!is.list(x)) return(x)
   if (identical(x[["family"]], "")) x[["family"]] <- NULL
-  x[] <- lapply(x, lp_drop_blank_family)
+  x[] <- lapply(x, drop_blank_family)
   x
 }
 
@@ -315,12 +319,12 @@ as_widget.ggmatrix <- function(x, ...) as_widget(ggplotly(x), ...)
 plot_geo <- function(data = data.frame(), ..., offline = FALSE) {
   p <- plot_ly(data, ...)
   p$x$layout$mapType <- "geo"
-  lp_geo2cartesian(p)
+  geo2cartesian(p)
 }
 
 # lat/lon given to plot_geo()/plot_mapbox() also serve as x/y, so add_*()
 # functions inherit them (as in the legacy package)
-lp_geo2cartesian <- function(p) {
+geo2cartesian <- function(p) {
   p$x$attrs <- lapply(p$x$attrs, function(tr) {
     tr[["x"]] <- tr[["x"]] %||l% tr[["lat"]]
     tr[["y"]] <- tr[["y"]] %||l% tr[["lon"]]
@@ -435,6 +439,6 @@ get_xy <- function(node) {
 #' @rdname plotly-deprecated
 #' @export
 remove_typedarray_polyfill <- function(p) {
-  lp_deprecated("remove_typedarray_polyfill", "there is no polyfill to remove; the plot is returned unchanged.")
+  deprecated("remove_typedarray_polyfill", "there is no polyfill to remove; the plot is returned unchanged.")
   p
 }

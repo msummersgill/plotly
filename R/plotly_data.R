@@ -4,7 +4,7 @@ plotly_data <- function(p, id = p$x$cur_data) {
   if (!is_legacy_plot(p)) stop("`plotly_data()` expects a plot_ly() object as its first argument.", call. = FALSE)
   f <- p$x$visdat[[id]]
   if (is.null(f)) return(NULL)
-  lp_shared_data(f())
+  shared_data(f())
 }
 
 #' Data with keys for linked highlighting
@@ -29,7 +29,7 @@ highlight_key <- function(x, ...) UseMethod("highlight_key")
 
 #' @export
 highlight_key.plotly <- function(x, ...) {
-  lp_require_crosstalk()
+  require_crosstalk()
   d <- plotly_data(x)
   d[[LP_CT_KEY]] <- NULL
   attr(d, "set") <- NULL
@@ -38,7 +38,7 @@ highlight_key.plotly <- function(x, ...) {
 
 #' @export
 highlight_key.default <- function(x, ...) {
-  lp_require_crosstalk()
+  require_crosstalk()
   crosstalk::SharedData$new(x, ...)
 }
 

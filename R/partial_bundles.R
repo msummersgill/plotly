@@ -1,7 +1,7 @@
 #' @rdname plotly-deprecated
 #' @export
 partial_bundle <- function(p, ...) {
-  lp_deprecated("partial_bundle", "plotly.js is loaded once per page by plotly.core; the plot is returned unchanged.")
+  deprecated("partial_bundle", "plotly.js is loaded once per page by plotly.core; the plot is returned unchanged.")
   p
 }
 

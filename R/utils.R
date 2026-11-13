@@ -5,31 +5,6 @@ is.plotly <- function(x) {
   inherits(x, "plotly")
 }
 
-is.formula <- function(f) {
-  inherits(f, "formula")
-}
-
-is.colorbar <- function(tr) {
-  inherits(tr, "plotly_colorbar")
-}
-
-is.evaled <- function(p) {
-  all(vapply(p$x$attrs, function(attr) inherits(attr, "plotly_eval"), logical(1)))
-}
-
-is.webgl <- function(p) {
-  if (!is.evaled(p)) p <- plotly_build(p)
-  types <- vapply(p$x$data, function(tr) tr[["type"]] %||% "scatter", character(1))
-  any(types %in% glTypes())
-}
-
-glTypes <- function() {
-  c(
-    "scattergl", "scatter3d", "mesh3d", "heatmapgl", "pointcloud", "parcoords",
-    "surface"
-  )
-}
-
 # just like ggplot2:::is.discrete()
 is.discrete <- function(x) {
   is.factor(x) || is.character(x) || is.logical(x)
@@ -50,8 +25,6 @@ is.discrete <- function(x) {
   if (!is.default(x)) x %||% y else y
 }
 
-lp_br <- function() "<br />"
-
 # standard way to specify a line break
 br <- function() "<br />"
 
@@ -59,11 +32,7 @@ is.default <- function(x) {
   inherits(x, "plotly_default")
 }
 
-# "Default" values are set by the build step and give way to anything the
-# user specifies (the legacy package's default()/is.default()).
-lp_default <- function(x) lp_prefix_class(x %||l% list(), "plotly_default")
-
-lp_is_default <- function(x) inherits(x, "plotly_default")
+is_default <- function(x) inherits(x, "plotly_default")
 
 # The legacy package's %||%: falls back for NULL *and* zero-length values.
 `%||l%` <- function(x, y) if (length(x) > 0) x else y
@@ -76,20 +45,11 @@ compact <- function(x) {
   Filter(Negate(is.null), x)
 }
 
-lp_modify_list <- function(x, y) utils::modifyList(x %||l% list(), y %||l% list())
+is_discrete <- function(x) is.factor(x) || is.character(x) || is.logical(x)
 
-lp_is_discrete <- function(x) is.factor(x) || is.character(x) || is.logical(x)
+getLevels <- function(x) if (is.factor(x)) levels(x) else sort(unique(x))
 
-lp_get_levels <- function(x) if (is.factor(x)) levels(x) else sort(unique(x))
-
-lp_uniq <- function(x) {
-  u <- unique(x)
-  if (identical(u, NA) || length(u) == 0) return(u)
-  u <- u[!is.na(u)]
-  if (length(u) == 1) u else x
-}
-
-lp_deparse <- function(x) {
+deparse2 <- function(x) {
   if (is.null(x) || !is.language(x)) return(NULL)
   sub("^~", "", paste(deparse(x, 500L), collapse = ""))
 }
@@ -98,49 +58,13 @@ modify_list <- function(x, y, ...) {
   modifyList(x %||% list(), y %||% list(), ...)
 }
 
-# convert a vector of dates/date-times to milliseconds
-to_milliseconds <- function(x) {
-  if (inherits(x, "Date")) return(as.numeric(x) * 86400000)
-  if (inherits(x, "POSIXt")) return(as.numeric(x) * 1000)
-  # throw warning?
-  x
-}
-
-# apply a function to x, retaining class and "special" plotly attributes
-retain <- function(x, f = identity) {
-  y <- structure(f(x), class = oldClass(x))
-  attrs <- attributes(x)
-  # TODO: do we set any other "special" attributes internally 
-  # (grepping "structure(" suggests no)
-  attrs <- attrs[names(attrs) %in% "apiSrc"]
-  if (length(attrs)) {
-    attributes(y) <- attrs
-  }
-  y
-}
-
-deparse2 <- function(x) {
-  if (is.null(x) || !is.language(x)) return(NULL)
-  sub("^~", "", paste(deparse(x, 500L), collapse = ""))
-}
-
-lp_new_id <- function() basename(tempfile(""))
-
 new_id <- function() {
   basename(tempfile(""))
 }
 
-names2 <- function(x) {
-  names(x) %||% rep("", length(x))
-}
-
-getLevels <- function(x) {
-  if (is.factor(x)) levels(x) else sort(unique(x))
-}
-
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
 
-lp_is_tidy <- function(trace) {
+is_tidy <- function(trace) {
   !(trace[["type"]] %||l% "scatter") %in% c("mesh3d", "heatmap", "histogram2d", "isosurface",
                                          "histogram2dcontour", "contour", "surface")
 }
@@ -153,25 +77,9 @@ LP_GL_TYPES <- c("scattergl", "scatter3d", "mesh3d", "heatmapgl", "pointcloud", 
 LP_COLORWAY <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
                  "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
 
-# Don't attempt to do "tidy" data training on these trace types
-# Note that non-tidy traces expect/anticipate data_array's of varying lengths
-is_tidy <- function(trace) {
-  type <- trace[["type"]] %||% "scatter"
-  !type %in% c(
-    "mesh3d", "heatmap", "histogram2d", "isosurface",
-    "histogram2dcontour", "contour", "surface"
-  )
-}
-
-lp_has_group <- function(trace) {
-  inherits(trace, paste0("plotly_", c("segment", "path", "line", "polygon"))) ||
-    (grepl("scatter", trace[["type"]] %||l% "") && grepl("lines", trace[["mode"]] %||l% ""))
-}
-
-# is grouping relevant for this geometry? (e.g., grouping doesn't effect a scatterplot)
 has_group <- function(trace) {
   inherits(trace, paste0("plotly_", c("segment", "path", "line", "polygon"))) ||
-    (grepl("scatter", trace[["type"]]) && grepl("lines", trace[["mode"]]))
+    (grepl("scatter", trace[["type"]] %||l% "") && grepl("lines", trace[["mode"]] %||l% ""))
 }
 
 # currently implemented non-positional scales in plot_ly()
@@ -179,33 +87,29 @@ npscales <- function() {
   c("color", "stroke", "symbol", "linetype", "size", "span", "split")
 }
 
-lp_colorway <- function(p = NULL) {
-  lapply(as.list(p$x$layout$colorway %||l% LP_COLORWAY), function(x) structure(x, class = "colorway"))
-}
-
-lp_rescale <- function(x, to = c(0, 1), from = range(x, na.rm = TRUE)) {
+rescale <- function(x, to = c(0, 1), from = range(x, na.rm = TRUE)) {
   if (diff(from) == 0) return(ifelse(is.na(x), NA, mean(to)))
   (x - from[1]) / diff(from) * diff(to) + to[1]
 }
 
 # A palette given as RColorBrewer/viridis names or a vector of colors, as a
 # function of n (scales' toPaletteFunc()).
-lp_palette_fun <- function(pal) {
+palette_fun <- function(pal) {
   if (is.character(pal) && length(pal) == 1 && pal %in% rownames(RColorBrewer::brewer.pal.info)) {
     maxn <- RColorBrewer::brewer.pal.info[pal, "maxcolors"]
     cols <- RColorBrewer::brewer.pal(maxn, pal)
-    return(function(n) if (n <= maxn) RColorBrewer::brewer.pal(max(n, 3L), pal)[seq_len(n)] else lp_ramp(cols)(seq(0, 1, length.out = n)))
+    return(function(n) if (n <= maxn) RColorBrewer::brewer.pal(max(n, 3L), pal)[seq_len(n)] else ramp(cols)(seq(0, 1, length.out = n)))
   }
   if (is.character(pal) && length(pal) == 1 && pal %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
     return(function(n) substr(viridisLite::viridis(n, option = pal), 1, 7))
   }
-  ramp <- lp_ramp(pal)
+  ramp <- ramp(pal)
   function(n) if (n == 1) ramp(0) else ramp(seq(0, 1, length.out = n))
 }
 
 # Interpolate colors in CIE Lab space (like scales::colour_ramp()); values
 # that fall exactly on a palette color return it unchanged.
-lp_ramp <- function(colors) {
+ramp <- function(colors) {
   # a color interpolation function such as colorRamp() (RGB matrix, 0-255)
   # or one returning colors, of values in [0, 1] (as scales' palettes)
   if (is.function(colors)) {
@@ -239,7 +143,7 @@ lp_ramp <- function(colors) {
   }
 }
 
-lp_col_factor <- function(pal, levels, na.color = "transparent") {
+col_factor <- function(pal, levels, na.color = "transparent") {
   if (!is.null(names(pal))) {
     return(function(x) {
       out <- unname(pal[as.character(x)])
@@ -247,7 +151,7 @@ lp_col_factor <- function(pal, levels, na.color = "transparent") {
       out
     })
   }
-  cols <- lp_palette_fun(pal)(length(levels))
+  cols <- palette_fun(pal)(length(levels))
   function(x) {
     out <- cols[match(as.character(x), levels)]
     out[is.na(out)] <- na.color
@@ -255,10 +159,10 @@ lp_col_factor <- function(pal, levels, na.color = "transparent") {
   }
 }
 
-lp_col_numeric <- function(pal, domain, na.color = "transparent") {
-  ramp <- if (is.character(pal) && length(pal) == 1) lp_ramp(lp_palette_fun(pal)(256)) else lp_ramp(pal)
+col_numeric <- function(pal, domain, na.color = "transparent") {
+  ramp <- if (is.character(pal) && length(pal) == 1) ramp(palette_fun(pal)(256)) else ramp(pal)
   function(x) {
-    out <- ramp(lp_rescale(x, from = domain))
+    out <- ramp(rescale(x, from = domain))
     out[is.na(out)] <- na.color
     out
   }
@@ -283,7 +187,7 @@ LP_LTY <- c("0" = "none", "1" = "solid", "2" = "dash", "3" = "dot", "4" = "dashd
             "2262" = "dashdot", "12223242" = "dashdot", "F282" = "dash", "F4448444" = "dash",
             "224282F2" = "dash", "F1" = "dash")
 
-lp_lookup <- function(x, table) {
+lookup <- function(x, table) {
   x <- as.character(x)
   idx <- x %in% names(table)
   x[idx] <- table[x[idx]]
@@ -291,10 +195,10 @@ lp_lookup <- function(x, table) {
 }
 
 # A figure (or part) as plain lists and vectors.
-lp_plain_value <- function(x) {
+plain_value <- function(x) {
   if (is.list(x)) {
     x <- unclass(x)
-    x[] <- lapply(x, lp_plain_value)
+    x[] <- lapply(x, plain_value)
   } else if (inherits(x, "AsIs")) {
     # drop only AsIs: I(<POSIXct>) must stay a POSIXct
     oldClass(x) <- setdiff(oldClass(x), "AsIs")
@@ -304,12 +208,12 @@ lp_plain_value <- function(x) {
 
 # Set a value at a path of names, creating lists along the way (a NULL value
 # is stored, not dropped).
-lp_set_path_value <- function(x, path, value) {
+set_path_value <- function(x, path, value) {
   if (length(path) == 1L) {
     x[path] <- list(value)
     return(x)
   }
-  x[[path[[1L]]]] <- lp_set_path_value(x[[path[[1L]]]] %||l% list(), path[-1L], value)
+  x[[path[[1L]]]] <- set_path_value(x[[path[[1L]]]] %||l% list(), path[-1L], value)
   x
 }
 
@@ -321,45 +225,25 @@ stats_named <- function(x, nm) {
 is_legacy_plot <- function(p) inherits(p, "plotly") && inherits(p, "htmlwidget")
 
 # Range of the values (NULL if there are none, e.g. a splom trace's x).
-lp_range <- function(v) {
+range_or_null <- function(v) {
   v <- unlist(v)
   if (!length(v) || all(is.na(v))) return(NULL)
   range(v, na.rm = TRUE)
 }
 
 # The events plotly.core's widget sends to Shiny by default.
-lp_default_events <- function() unclass(plotly.core::plotly_widget(list())$x$shinyEvents)
+default_events <- function() unclass(plotly.core::plotly_widget(list())$x$shinyEvents)
 
 # data.table symbols used by group2NA()
 utils::globalVariables(c(".I", ".N"))
 
 colorway <- function(p = NULL) {
-  colway <- p$x$layout$colorway %||% Schema$layout$layoutAttributes$colorway$dflt
-  lapply(as.list(colway), function(x) structure(x, class = "colorway"))
+  lapply(as.list(p$x$layout$colorway %||l% LP_COLORWAY), function(x) structure(x, class = "colorway"))
 }
 
 # column name for crosstalk key
 # TODO: make this more unique?
 crosstalk_key <- function() ".crossTalkKey"
-
-# arrange data if the vars exist, don't throw error if they don't
-arrange_safe <- function(data, vars) {
-  vars <- vars[vars %in% names(data)]
-  if (length(vars)) dplyr::arrange(data, !!!rlang::syms(vars)) else data
-}
-
-is_mapbox <- function(p) {
-  identical(p$x$layout[["mapType"]], "mapbox")
-}
-
-is_geo <- function(p) {
-  identical(p$x$layout[["mapType"]], "geo")
-}
-
-is_type <- function(p, type) {
-  types <- vapply(p$x$data, function(tr) tr[["type"]] %||% "scatter", character(1))
-  all(types %in% type)
-}
 
 # Replace elements of a nested list
 # 
@@ -379,766 +263,6 @@ is_type <- function(p, type) {
 # y <- re_place(y, list("a", 1, "b"), 3)
 # y
 
-re_place <- function(x, indicies = 1, val) {
-  
-  expr <- call("[[", quote(x), indicies[[1]])
-  if (length(indicies) == 1) {
-    eval(call("<-", expr, val))
-    return(x)
-  }
-  
-  for (i in seq(2, length(indicies))) {
-    expr <- call("[[", expr, indicies[[i]])
-  }
-  
-  eval(call("<-", expr, val))
-  x
-}
-
-
-# retrive mapbox token if one is set; otherwise, throw error
-mapbox_token <- function() {
-  token <- Sys.getenv("MAPBOX_TOKEN", NA)
-  if (is.na(token)) {
-    stop(
-      "No mapbox access token found. Obtain a token here\n",
-      "https://www.mapbox.com/help/create-api-access-token/\n",
-      "Once you have a token, assign it to an environment variable \n",
-      "named 'MAPBOX_TOKEN', for example,\n",
-      "Sys.setenv('MAPBOX_TOKEN' = 'secret token')", call. = FALSE
-    )
-  }
-  token
-}
-
-fit_bounds <- function(p) {
-  # Compute layout.mapboxid._fitBounds, an internal attr that has special client-side logic
-  # PS. how the hell does mapbox not have a way to set initial map bounds?
-  # https://github.com/mapbox/mapbox-gl-js/issues/1970
-  mapboxIDs <- grep("^mapbox", sapply(p$x$data, "[[", "subplot"), value = TRUE)
-  for (id in mapboxIDs) {
-    bboxes <- lapply(p$x$data, function(tr) if (identical(id, tr$subplot)) tr[["_bbox"]])
-    rng <- bboxes2range(bboxes, f = 0.01)
-    if (!length(rng)) next
-    # intentionally an array of numbers in [west, south, east, north] order
-    # https://www.mapbox.com/mapbox-gl-js/api/#lnglatboundslike
-    p$x$layout[[id]]$`_fitBounds` <- list(
-      bounds = c(
-        min(rng$xrng),
-        min(rng$yrng),
-        max(rng$xrng),
-        max(rng$yrng)
-      ),
-      options = list(
-        padding = 10, 
-        linear = FALSE,
-        # NOTE TO SELF: can do something like this to customize easing
-        # easing = htmlwidgets::JS("function(x) { return 1; }"),
-        offset = c(0, 0)
-      )
-    )
-    p$x$layout[[id]]$center$lat <- mean(rng$yrng)
-    p$x$layout[[id]]$center$lon <- mean(rng$xrng)
-  }
-  
-  # Compute layout.geoid.lonaxis.range & layout.geoid.lataxis.range
-  # for scattergeo
-  geoIDs <- grep("^geo", sapply(p$x$data, "[[", "geo"), value = TRUE)
-  for (id in geoIDs) {
-    bboxes <- lapply(p$x$data, function(tr) if (identical(id, tr$geo)) tr[["_bbox"]])
-    rng <- bboxes2range(bboxes, f = 0.01)
-    if (!length(rng)) next
-    p$x$layout[[id]]$lataxis$range <- rng$yrng
-    p$x$layout[[id]]$lonaxis$range <- rng$xrng
-  }
-  
-  # Compute layout.axisid.scaleanchor & layout.axisid.scaleratio
-  # for scatter/scattergl
-  rows <- compact(lapply(p$x$data, function(x) c(x[["xaxis"]], x[["yaxis"]])))
-  for (i in seq_along(rows)) {
-    xid <- rows[[i]][[1]]
-    yid <- rows[[i]][[2]]
-    bboxes <- lapply(p$x$data, function(tr) {
-      if (identical(xid, tr$xaxis) && identical(yid, tr$yaxis)) tr[["_bbox"]]
-    })
-    rng <- bboxes2range(bboxes, f = 0.01)
-    if (!length(rng)) next
-    xname <- sub("x", "xaxis", xid)
-    yname <- sub("y", "yaxis", yid)
-    # default to empty axes
-    # TODO: is there a set of projections where it makes sense to show a cartesian grid?
-    eaxis <- list(showgrid = FALSE, zeroline = FALSE, ticks = "", showticklabels = FALSE)
-    p$x$layout[[xname]] <- modify_list(eaxis, p$x$layout[[xname]])
-    p$x$layout[[yname]] <- modify_list(eaxis, p$x$layout[[yname]])
-    # remove default axis titles
-    p$x$layout[[xname]]$title <- p$x$layout[[xname]]$title %|D|% NULL
-    p$x$layout[[yname]]$title <- p$x$layout[[yname]]$title %|D|% NULL
-    p$x$layout[[xname]]$scaleanchor <- yid
-    # TODO: only do this for lat/lon dat
-    p$x$layout[[xname]]$scaleratio <- cos(mean(rng$yrng) * pi/180)
-  }
-  
-  # Internal _bbox field no longer needed
-  #p$x$data <- lapply(p$x$data, function(tr) { tr[["_bbox"]] <- NULL; tr })
-  p
-}
-
-# find the x/y layout range of a collection of trace._bboxes
-bboxes2range <- function(bboxes, ...) {
-  if (sum(lengths(bboxes)) == 0) return(NULL)
-  yrng <- c(
-    min(unlist(lapply(bboxes, "[[", "ymin")), na.rm = TRUE),
-    max(unlist(lapply(bboxes, "[[", "ymax")), na.rm = TRUE)
-  )
-  xrng <- c(
-    min(unlist(lapply(bboxes, "[[", "xmin")), na.rm = TRUE),
-    max(unlist(lapply(bboxes, "[[", "xmax")), na.rm = TRUE)
-  )
-  list(
-    yrng = grDevices::extendrange(yrng, ...),
-    xrng = grDevices::extendrange(xrng, ...)
-  )
-}
-
-# rename attrs (unevaluated arguments) from geo locations (lat/lon) to cartesian
-geo2cartesian <- function(p) {
-  p$x$attrs <- lapply(p$x$attrs, function(tr) {
-    tr[["x"]] <- tr[["x"]] %||% tr[["lat"]]
-    tr[["y"]] <- tr[["y"]] %||% tr[["lon"]]
-    tr
-  })
-  p
-}
-
-cartesian2geo <- function(p) {
-  p$x$data <- lapply(p$x$data, function(tr) {
-    if (isTRUE(tr[["type"]] %in% c("scattermapbox", "scattergeo"))) {
-      tr[["lat"]] <- tr[["lat"]] %||% tr[["y"]]
-      tr[["lon"]] <- tr[["lon"]] %||% tr[["x"]]
-      tr[c("x", "y")] <- NULL
-    }
-    tr
-  })
-  p
-}
-
-
-is_subplot <- function(p) {
-  isTRUE(p$x$subplot)
-}
-
-supply_defaults <- function(p) {
-  # no need to supply defaults for subplots
-  if (is_subplot(p)) return(p)
-  # supply trace anchor defaults
-  anchors <- if (is_geo(p)) c("geo" = "geo") else if (is_mapbox(p)) c("subplot" = "mapbox") else c("xaxis" = "x", "yaxis" = "y")
-  
-  p$x$data <- lapply(p$x$data, function(tr) {
-    for (i in seq_along(anchors)) {
-      key <- names(anchors)[[i]]
-      if (!has_attr(tr[["type"]] %||% "scatter", key)) next
-      tr[[key]] <- sub("^y1$", "y", sub("^x1$", "x", tr[[key]][1])) %||% anchors[[i]]
-    }
-    tr
-  })
-  # hack to avoid https://github.com/ropensci/plotly/issues/945
-  if (is_type(p, "parcoords")) p$x$layout$margin$t <- NULL
-  
-  # supply domain defaults
-  geoDomain <- list(x = c(0, 1), y = c(0, 1))
-  if (is_geo(p) || is_mapbox(p)) {
-    p$x$layout[grepl("^[x-y]axis", names(p$x$layout))] <- NULL
-    p$x$layout[[p$x$layout$mapType]] <- modify_list(
-      list(domain = geoDomain), p$x$layout[[p$x$layout$mapType]]
-    )
-  } else if (!length(p$x$layout[["grid"]])) {
-    types <- vapply(p$x$data, function(tr) tr[["type"]] %||% "scatter", character(1))
-    axes <- unlist(lapply(types, function(x) {
-      grep("^[a-z]axis$", names(Schema$traces[[x]]$attributes), value = TRUE) %||% NULL
-    }))
-    for (axis in axes) {
-      p$x$layout[[axis]] <- modify_list(
-        list(domain = c(0, 1), automargin = TRUE), p$x$layout[[axis]]
-      )
-    }
-  }
-  p
-}
-
-supply_highlight_attrs <- function(p) {
-  # set "global" options via crosstalk variable
-  p$x$highlight <- p$x$highlight %||% highlight_defaults()
-  
-  # Grab the special "crosstalk set" (i.e., group) for each trace
-  sets <- lapply(p$x$data, "[[", "set")
-  noSet <- vapply(sets, is.null, logical(1))
-  
-  # If no sets are present, there's nothing more to do
-  if (all(noSet)) {
-    return(p)
-  }
-  
-  # Store the unique set of crosstalk sets (which gets looped over client-side) 
-  p$x$highlight$ctGroups <- i(unique(unlist(sets)))
-  
-  # Build a set -> key mapping for each relevant trace, which we'll use
-  # to set default values and/or build the selectize.js payload (if relevant)
-  setDat <- p$x$data[!noSet]
-  keys <- setNames(lapply(setDat, "[[", "key"), sets[!noSet])
-  
-  for (i in p$x$highlight$ctGroups) {
-    
-    # Get all the keys for this crosstalk group
-    k <- unique(unlist(keys[names(keys) %in% i], use.names = FALSE))
-    k <- k[!is.null(k)]
-    if (length(k) == 0) next
-    
-    # set default values via crosstalk api
-    vals <- intersect(p$x$highlight$defaultValues, k)
-    if (length(vals)) {
-      p <- htmlwidgets::onRender(
-        p, sprintf(
-          "function(el, x) { crosstalk.group('%s').var('selection').set(%s) }", 
-          i, jsonlite::toJSON(as.character(vals), auto_unbox = FALSE)
-        )
-      )
-    }
-
-    # include one selectize dropdown per "valid" SharedData layer
-    selectize <- p$x$highlight$selectize %||% FALSE
-    if (!identical(selectize, FALSE)) {
-      options <- list(items = data.frame(value = k, label = k), group = i)
-      if (!is.logical(selectize)) {
-        options <- modify_list(options, selectize)
-      }
-      # Hash i (the crosstalk group id) so that it can be used
-      # as an HTML id client-side (i.e., key shouldn't contain spaces)
-      groupId <- rlang::hash(i)
-      
-      # If the selectize payload has already been built, use that already built payload
-      # (since it may have been modified at this point), unless there are new keys to consider
-      oldSelectize <- p$x$selectize[[groupId]]
-      if (length(oldSelectize) > 0) {
-        missingKeys <- setdiff(k, oldSelectize$items$value)
-        if (length(missingKeys) > 0) {
-          warning("Overwriting the existing selectize payload for group '", i, "'. If you've previously modified this payload in some way, consider modifying it again.")
-        } else {
-          options <- oldSelectize
-        }
-      } 
-      
-      p$x$selectize[[groupId]] <- options
-    }
-  }
-
-  # set a sensible dragmode default, & throw messages
-  p$x$layout$dragmode <- p$x$layout$dragmode %|D|% 
-    default(switch(p$x$highlight$on %||% "", plotly_selected = "select", plotly_selecting = "select") %||% "zoom")
-  if (is.default(p$x$highlight$off)) {
-    message(
-      sprintf(
-        "Setting the `off` event (i.e., '%s') to match the `on` event (i.e., '%s'). You can change this default via the `highlight()` function.",
-        p$x$highlight$off, p$x$highlight$on
-      )
-    )
-  }
-  
-  p
-}
-
-
-# make sure plot attributes adhere to the plotly.js schema
-verify_attr_names <- function(p) {
-  # some layout attributes (e.g., [x-y]axis can have trailing numbers)
-  attrs_name_check(
-    sub("[0-9]+$", "", names(p$x$layout)),
-    c(names(Schema$layout$layoutAttributes), c("boxmode", "barmode", "bargap", "mapType")),
-    "layout"
-  )
-  attrs_name_check(
-    names(p$x$config),
-    names(Schema$config),
-    "config"
-  )
-  for (tr in seq_along(p$x$data)) {
-    thisTrace <- p$x$data[[tr]]
-    attrSpec <- Schema$traces[[thisTrace$type %||% "scatter"]]$attributes
-    # make sure attribute names are valid
-    attrs_name_check(
-      names(thisTrace), 
-      c(names(attrSpec), "key", "set", "frame", "transforms", "_isNestedKey", "_isSimpleKey", "_isGraticule", "_bbox"), 
-      thisTrace$type
-    )
-  }
-  invisible(p)
-}
-
-
-# ensure both the layout and trace attributes adhere to the plot schema
-verify_attr_spec <- function(p) {
-  if (!is.null(p$x$layout)) {
-    p$x$layout <- verify_attr(
-      p$x$layout, Schema$layout$layoutAttributes, layoutAttr = TRUE
-    )
-  }
-  for (tr in seq_along(p$x$data)) {
-    thisTrace <- p$x$data[[tr]]
-    validAttrs <- Schema$traces[[thisTrace$type %||% "scatter"]]$attributes
-    p$x$data[[tr]] <- verify_attr(thisTrace, validAttrs)
-    # prevent these objects from sending null keys
-    p$x$data[[tr]][["xaxis"]] <- p$x$data[[tr]][["xaxis"]] %||% NULL
-    p$x$data[[tr]][["yaxis"]] <- p$x$data[[tr]][["yaxis"]] %||% NULL
-  }
-  
-  p
-}
-
-verify_attr <- function(proposed, schema, layoutAttr = FALSE) {
-  for (attr in names(proposed)) {
-    attrSchema <- schema[[attr]] %||% schema[[sub("[0-9]+$", "", attr)]]
-    # if schema is missing (i.e., this is an un-official attr), move along
-    if (is.null(attrSchema)) next
-    
-    valType <- tryNULL(attrSchema[["valType"]]) %||% ""
-    role <- tryNULL(attrSchema[["role"]]) %||% ""
-    arrayOK <- tryNULL(attrSchema[["arrayOk"]]) %||% FALSE
-    isDataArray <- identical(valType, "data_array")
-    
-    # where applicable, reduce single valued vectors to a constant 
-    # (while preserving attributes)
-    if (!isDataArray && !arrayOK && !identical(role, "object")) {
-      proposed[[attr]] <- retain(proposed[[attr]], uniq)
-    }
-    
-    # If we deliberately only want hover on fills, send a string to 
-    # plotly.js so it does something sensible 
-    if (identical(proposed[["hoveron"]], "fills")) {
-      proposed[["text"]] <- paste(uniq(proposed[["text"]]), collapse = "\n")
-    }
-    
-    # ensure data_arrays of length 1 are boxed up by to_JSON()
-    if (isDataArray) {
-      proposed[[attr]] <- i(proposed[[attr]])
-    }
-    
-    # tag 'src-able' attributes (needed for api_create())
-    # note that layout has 'src-able' attributes that shouldn't
-    # be turned into grids https://github.com/ropensci/plotly/pull/1489
-    isSrcAble <- !is.null(schema[[paste0(attr, "src")]]) && length(proposed[[attr]]) > 1
-    if ((isDataArray || isSrcAble) && !isTRUE(layoutAttr)) {
-      proposed[[attr]] <- structure(proposed[[attr]], apiSrc = TRUE)
-    }
-    
-    if (length(proposed[["name"]]) > 0) {
-      proposed$name <- uniq(proposed$name)
-    }
-    
-    # if marker.size was populated via `size` arg (i.e., internal map_size()), 
-    # then it should _always_ be an array
-    # of appropriate length...
-    # (when marker.size is a constant, it always sets the diameter!)
-    # https://codepen.io/cpsievert/pen/zazXgw
-    # https://github.com/plotly/plotly.js/issues/2735
-    if (is.default(proposed$marker$size)) {
-      s <- proposed$marker[["size"]]
-      if (length(s) == 1) {
-        # marker.size could be of length 1, but we may have multiple 
-        # markers -- in that case, if marker.size is an array 
-        # of length 1 will result in just one marker
-        # https://codepen.io/cpsievert/pen/aMmOza
-        n <- length(proposed[["x"]] %||% proposed[["y"]] %||% proposed[["lat"]] %||% proposed[["lon"]])
-        proposed$marker[["size"]] <- default(i(rep(s, n)))
-      }
-    }
-    
-    # do the same for "sub-attributes"
-    if (identical(role, "object") && is.recursive(proposed[[attr]])) {
-      proposed[[attr]] <- verify_attr(proposed[[attr]], attrSchema, layoutAttr = layoutAttr)
-    }
-  }
-  
-  proposed
-}
-
-attrs_name_check <- function(proposedAttrs, validAttrs, type = "scatter") {
-  illegalAttrs <- setdiff(proposedAttrs, validAttrs)
-  if ("titlefont" %in% illegalAttrs) {
-    warning("The titlefont attribute is deprecated. Use title = list(font = ...) instead.", call. = FALSE)
-    illegalAttrs <- setdiff(illegalAttrs, "titlefont")
-  }
-  if (length(illegalAttrs)) {
-    warning("'", type, "' objects don't have these attributes: '",
-            paste(illegalAttrs, collapse = "', '"), "'\n", 
-            "Valid attributes include:\n'",
-            paste(validAttrs, collapse = "', '"), "'\n", 
-            call. = FALSE)
-  }
-  invisible(proposedAttrs)
-}
-
-# make sure trace type is valid
-# TODO: add an argument to verify trace properties are valid (https://github.com/ropensci/plotly/issues/540)
-verify_type <- function(trace) {
-  if (is.null(trace$type)) {
-    attrs <- names(trace)
-    attrLengths <- lengths(trace)
-    trace$type <- if (all(c("x", "y", "z") %in% attrs)) {
-      if (all(c("i", "j", "k") %in% attrs)) "mesh3d" else "scatter3d"
-    } else if (all(c("x", "y") %in% attrs)) {
-      xNumeric <- !is.discrete(trace[["x"]])
-      yNumeric <- !is.discrete(trace[["y"]])
-      if (xNumeric && yNumeric) {
-        if (any(attrLengths) > 15000) "scattergl" else "scatter"
-      } else if (xNumeric || yNumeric) {
-        "bar" 
-      } else "histogram2d"
-    } else if ("y" %in% attrs || "x" %in% attrs) {
-      "histogram"
-    } else if ("z" %in% attrs) {
-      "heatmap"
-    } else {
-      warning("No trace type specified and no positional attributes specified", 
-              call. = FALSE)
-      "scatter"
-    }
-    relay_type(trace$type)
-  }
-  if (!is.character(trace$type) || length(trace$type) != 1) {
-    stop("The trace type must be a character vector of length 1.\n", 
-         call. = FALSE)
-  }
-  if (!trace$type %in% names(Schema$traces)) {
-    stop("Trace type must be one of the following: \n",
-         "'", paste(names(Schema$traces), collapse = "', '"), "'",
-         call. = FALSE)
-  }
-  # if scatter/scatter3d/scattergl, default to a scatterplot
-  if (grepl("scatter", trace$type) && is.null(trace$mode)) {
-    message(
-      "No ", trace$type, " mode specifed:\n",
-      "  Setting the mode to markers\n",
-      "  Read more about this attribute -> https://plotly.com/r/reference/#scatter-mode"
-    )
-    trace$mode <- "markers"
-  }
-  trace
-}
-
-relay_type <- function(type) {
-  message(
-    "No trace type specified:\n", 
-    "  Based on info supplied, a '", type, "' trace seems appropriate.\n",
-    "  Read more about this trace type -> https://plotly.com/r/reference/#", type
-  )
-  type
-}
-
-# Searches a list for character strings and translates R linebreaks to HTML 
-# linebreaks (i.e., '\n' -> '<br />'). JavaScript function definitions created 
-# via `htmlwidgets::JS()` are ignored
-translate_linebreaks <- function(p) {
-  recurse <- function(a) {
-    typ <- typeof(a)
-    if (typ == "list") {
-      # retain the class of list elements 
-      # which is important for many things, such as colorbars
-      a[] <- lapply(a, recurse)
-    } else if (typ == "character" && !inherits(a, "JS_EVAL")) {
-      attrs <- attributes(a)
-      a <- gsub("\n", br(), a, fixed = TRUE)
-      attributes(a) <- attrs
-    } else if (is.factor(a)) {
-      levels(a) <- gsub("\n", br(), levels(a), fixed = TRUE)
-    }
-    a
-  }
-  p$x[] <- lapply(p$x, recurse)
-  p
-}
-
-verify_orientation <- function(trace) {
-  xNumeric <- !is.discrete(trace[["x"]]) && !is.null(trace[["x"]] %||% NULL)
-  yNumeric <- !is.discrete(trace[["y"]]) && !is.null(trace[["y"]] %||% NULL)
-  if (xNumeric && !yNumeric) {
-    if (any(c("bar", "box") %in% trace[["type"]])) {
-      trace$orientation <- "h"
-    }
-  }
-  if (yNumeric && "histogram" %in% trace[["type"]]) {
-    trace$orientation <- "h"
-  }
-  trace
-}
-
-verify_mode <- function(p) {
-  for (tr in seq_along(p$x$data)) {
-    trace <- p$x$data[[tr]]
-    if (grepl("scatter", trace$type %||% "scatter")) {
-      if (user_specified(trace$marker) && !grepl("markers", trace$mode %||% "")) {
-        message(
-          "A marker object has been specified, but markers is not in the mode\n",
-          "Adding markers to the mode..."
-        )
-        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+markers")
-      }
-      if (user_specified(trace$line) && !grepl("lines", trace$mode %||% "")) {
-        message(
-          "A line object has been specified, but lines is not in the mode\n",
-          "Adding lines to the mode..."
-        )
-        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+lines")
-      }
-      if (user_specified(trace$textfont) && !grepl("text", trace$mode %||% "")) {
-        warning(
-          "A textfont object has been specified, but text is not in the mode\n",
-          "Adding text to the mode..."
-        )
-        p$x$data[[tr]]$mode <- paste0(p$x$data[[tr]]$mode, "+text")
-      }
-    }
-  }
-  p
-}
-
-
-verify_colorscale <- function(p) {
-  p$x$data <- lapply(p$x$data, function(trace) {
-    trace$colorscale <- colorscale_json(trace$colorscale)
-    trace$marker$colorscale <- colorscale_json(trace$marker$colorscale)
-    trace
-  }) 
-  p
-}
-
-# Coerce `x` into a data structure that can map to a colorscale attribute.
-# Note that colorscales can either be the name of a scale (e.g., 'Rainbow') or 
-# a 2D array (e.g., [[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']])
-colorscale_json <- function(x) {
-  if (!length(x)) return(x)
-  if (is.character(x)) return(x)
-  if (is.matrix(x)) {
-    if (ncol(x) != 2) stop("A colorscale matrix requires two columns")
-    x <- as.data.frame(x)
-    x[, 1] <- as.numeric(x[, 1])
-  }
-  # ensure a list like this: list(list(0, 0.5, 1), list("red", "white", "blue"))
-  # converts to the correct dimensions: [[0, 'red'], [0.5, 'white'], [1, 'blue']]
-  if (is.list(x) && length(x) == 2) {
-    n1 <- length(x[[1]])
-    n2 <- length(x[[2]])
-    if (n1 != n2 || n1 == 0 || n2 == 0) {
-      warning("A colorscale list must of elements of the same (non-zero) length")
-    } else if (!is.data.frame(x) && can_be_numeric(x[[1]])) {
-      x <- data.frame(
-        val = as.numeric(x[[1]]),
-        col = as.character(x[[2]]),
-        stringsAsFactors = FALSE
-      )
-      x <- setNames(x, NULL)
-    }
-  }
-  x
-}
-
-can_be_numeric <- function(x) {
-  xnum <- suppressWarnings(as.numeric(x))
-  sum(is.na(x)) == sum(is.na(xnum))
-}
-
-# if an object (e.g. trace.marker) contains a non-default attribute, it has been user-specified
-user_specified <- function(obj = NULL) {
-  if (!length(obj)) return(FALSE)
-  !all(rapply(obj, is.default))
-}
-
-# populate categorical axes using categoryorder="array" & categoryarray=[]
-populate_categorical_axes <- function(p) {
-  axes <- p$x$layout[grepl("^xaxis|^yaxis", names(p$x$layout))] %||%
-    list(xaxis = NULL, yaxis = NULL)
-  for (i in seq_along(axes)) {
-    axis <- axes[[i]]
-    axisName <- names(axes)[[i]]
-    axisType <- substr(axisName, 0, 1)
-    # ggplotly() populates these attributes...don't want to clobber that
-    if (!is.null(axis$ticktext) || !is.null(axis$tickvals)) next
-    # collect all the data that goes on this axis
-    d <- lapply(p$x$data, "[[", axisType)
-    isOnThisAxis <- function(tr) {
-      is.null(tr[["geo"]]) && sub("axis", "", axisName) %in% 
-        (tr[[sub("[0-9]+", "", axisName)]] %||% axisType) &&
-        # avoid reordering matrices (see #863)
-        !is.matrix(tr[["z"]])
-    }
-    d <- d[vapply(p$x$data, isOnThisAxis, logical(1))]
-    if (length(d) == 0) next
-    isDiscrete <- vapply(d, is.discrete, logical(1))
-    if (0 < sum(isDiscrete) & sum(isDiscrete) < length(d)) {
-      warning(
-        "Can't display both discrete & non-discrete data on same axis", 
-        call. = FALSE
-      )
-      next
-    }
-    if (sum(isDiscrete) == 0) next
-    categories <- lapply(d, getLevels)
-    categories <- unique(unlist(categories))
-    if (any(!vapply(d, is.factor, logical(1)))) categories <- sort(categories)
-    p$x$layout[[axisName]]$type <- 
-      p$x$layout[[axisName]]$type %||% "category"
-    p$x$layout[[axisName]]$categoryorder <- 
-      p$x$layout[[axisName]]$categoryorder %||% "array"
-    p$x$layout[[axisName]]$categoryarray <- 
-      p$x$layout[[axisName]]$categoryarray %||% categories
-  }
-  p
-}
-
-verify_arrays <- function(p) {
-  for (i in c("annotations", "shapes", "images")) {
-    thing <- p$x$layout[[i]]
-    if (is.list(thing) && !is.null(names(thing))) {
-      p$x$layout[[i]] <- list(thing)
-    }
-  }
-  p
-}
-
-verify_hovermode <- function(p) {
-  if (!is.null(p$x$layout$hovermode)) {
-    return(p)
-  }
-  types <- unlist(lapply(p$x$data, function(tr) tr$type %||% "scatter"))
-  modes <- unlist(lapply(p$x$data, function(tr) tr$mode %||% "lines"))
-  if (any(grepl("markers", modes) & types == "scatter") ||
-      any(c("plotly_hover", "plotly_click") %in% p$x$highlight$on)) {
-    p$x$layout$hovermode <- "closest"
-  }
-  p
-}
-
-verify_key_type <- function(p) {
-  keys <- lapply(p$x$data, "[[", "key")
-  for (i in seq_along(keys)) {
-    k <- keys[[i]]
-    if (is.null(k)) next
-    if ("select" %in% p$x$layout$clickmode && "plotly_click" %in% p$x$highlight$on) {
-      warning(
-        "`layout.clickmode` = 'select' is not designed to work well with ",
-        "the R package's linking framework (i.e. crosstalk support).",
-        call. = FALSE
-      )
-    }
-    # does it *ever* make sense to have a missing key value?
-    uk <- uniq(k)
-    if (length(uk) == 1) {
-      # i.e., the key for this trace has one value. In this case, 
-      # we don't have iterate through the entire key, so instead, 
-      # we provide a flag to inform client side logic to match the _entire_
-      # trace if this one key value is a match
-      p$x$data[[i]]$key <- uk[[1]]
-      p$x$data[[i]]$`_isSimpleKey` <- TRUE
-      p$x$data[[i]]$`_isNestedKey` <- FALSE
-    }
-    p$x$data[[i]]$`_isNestedKey` <- p$x$data[[i]]$`_isNestedKey` %||% !rlang::is_atomic(k)
-    # key values should always be strings
-    if (p$x$data[[i]]$`_isNestedKey`) {
-      p$x$data[[i]]$key <- lapply(p$x$data[[i]]$key, function(x) I(as.character(x)))
-      p$x$data[[i]]$key <- setNames(p$x$data[[i]]$key, NULL)
-    } else {
-      p$x$data[[i]]$key <- I(as.character(p$x$data[[i]]$key))
-    }
-  }
-  p 
-}
-
-verify_webgl <- function(p) {
-  # see toWebGL
-  if (!isTRUE(p$x$.plotlyWebGl)) {
-    return(p)
-  }
-  types <- sapply(p$x$data, function(x) x[["type"]][1] %||% "scatter")
-  can_gl <- paste0(types, "gl") %in% names(Schema$traces)
-  already_gl <- grepl("gl$", types)
-  if (any(!can_gl & !already_gl)) {
-    warning(
-      "The following traces don't have a WebGL equivalent: ",
-      paste(which(!can_gl & !already_gl), collapse = ", ")
-    )
-  }
-  for (i in which(can_gl)) {
-    p$x$data[[i]]$type <- paste0(p$x$data[[i]]$type, "gl")
-  }
-  p
-}
-
-verify_showlegend <- function(p) {
-  # this attribute should be set in hide_legend()
-  # it ensures that "legend titles" go away in addition to showlegend = FALSE
-  if (isTRUE(p$x$.hideLegend)) {
-    p$x$layout$showlegend <- FALSE 
-  }
-  show <- vapply(p$x$data, function(x) x$showlegend %||% TRUE, logical(1))
-  # respect only _user-specified_ defaults 
-  isSinglePie <- identical("pie", unlist(lapply(p$x$data, function(tr) tr$type))) 
-  p$x$layout$showlegend <- p$x$layout$showlegend %|D|%
-    default(sum(show) > 1 || isTRUE(p$x$highlight$showInLegend) || isSinglePie)
-  p
-}
-
-verify_guides <- function(p) {
-  
-  # since colorbars are implemented as "invisible" traces, prevent a "trivial" legend
-  if (has_colorbar(p) && has_legend(p) && length(p$x$data) <= 2) {
-    p$x$layout$showlegend <- default(FALSE)
-  }
-  
-  isVisibleBar <- function(tr) {
-    is.colorbar(tr) && (tr$showscale %||% TRUE)
-  }
-  isBar <- vapply(p$x$data, isVisibleBar, logical(1))
-  nGuides <- sum(isBar) + has_legend(p)
-  
-  if (nGuides > 1) {
-    
-    # place legend at bottom since its scrolly
-    yanchor <- default("top")
-    y <- default(1 - ((nGuides - 1) / nGuides))
-    p$x$layout$legend$yanchor <- p$x$layout$legend$yanchor %|D|% yanchor
-    p$x$layout$legend$y <- p$x$layout$legend[["y"]] %|D|% y
-    
-    # shrink/position colorbars
-    idx <- which(isBar)
-    for (i in seq_along(idx)) {
-      len     <- default(1 / nGuides)
-      lenmode <- default("fraction")
-      y       <- default(1 - ((i - 1) / nGuides))
-      
-      j <- idx[[i]]
-      tr <- p$x$data[[j]]
-      if (inherits(tr, "zcolor")) {
-        p$x$data[[j]]$colorbar$len <- tr$colorbar$len %|D|% len
-        p$x$data[[j]]$colorbar$lenmode <- tr$colorbar$lenmode %|D|% lenmode
-        p$x$data[[j]]$colorbar$y <- tr$colorbar$y %|D|% y
-        p$x$data[[j]]$colorbar$yanchor <- tr$colorbar$yanchor %|D|% yanchor
-      } else {
-        p$x$data[[j]]$marker$colorbar$len <- tr$marker$colorbar$len %|D|% len
-        p$x$data[[j]]$marker$colorbar$lenmode <- tr$marker$colorbar$lenmode %|D|% lenmode
-        p$x$data[[j]]$marker$colorbar$y <- tr$marker$colorbar$y %|D|% y
-        p$x$data[[j]]$marker$colorbar$yanchor <- tr$marker$colorbar$yanchor %|D|% yanchor
-      }
-    }
-    
-  }
-  
-  p
-}
-
-
-has_marker <- function(types, modes) {
-  is_scatter <- grepl("scatter", types)
-  ifelse(is_scatter, grepl("marker", modes), has_attr(types, "marker"))
-}
-
 has_line <- function(types, modes) {
   is_scatter <- grepl("scatter", types)
   ifelse(is_scatter, grepl("line", modes), has_attr(types, "line"))
@@ -1149,97 +273,16 @@ has_text <- function(types, modes) {
   ifelse(is_scatter, grepl("text", modes), has_attr(types, "textfont"))
 }
 
-has_color_array <- function(types, mode = "marker") {
-  vapply(types, function(x) isTRUE(tryNULL(Schema$traces[[x]]$attributes[[mode]]$color$arrayOk)), logical(1))
-}
-
-lp_has_attr <- function(types, attr = "marker") {
-  vapply(types, function(t) !is.null(lp_entry(paste0(t %||l% "scatter", ".", attr))), logical(1))
-}
-
 has_attr <- function(types, attr = "marker") {
-  if (length(attr) != 1) stop("attr must be of length 1")
-  vapply(types, function(x) attr %in% names(Schema$traces[[x]]$attributes), logical(1))
+  vapply(types, function(t) !is.null(entry(paste0(t %||l% "scatter", ".", attr))), logical(1))
 }
-
-has_legend <- function(p) {
-  showLegend <- function(tr) {
-    tr$showlegend %||% TRUE
-  }
-  any(vapply(p$x$data, showLegend, logical(1))) && 
-    isTRUE(p$x$layout$showlegend %|D|% TRUE)
-}
-
-has_colorbar <- function(p) {
-  isVisibleBar <- function(tr) {
-    is.colorbar(tr) && isTRUE(tr$showscale %||% TRUE)
-  }
-  any(vapply(p$x$data, isVisibleBar, logical(1)))
-}
-
-# is a given trace type 3d?
-is3d <- function(type = NULL) {
-  type <- type %||% "scatter"
-  type %in% c("mesh3d", "scatter3d", "surface")
-}
-
-# Check for credentials/configuration and throw warnings where appropriate
-verify <- function(what = "username", warn = TRUE) {
-  val <- grab(what)
-  if (val == "" && warn) {
-    switch(what,
-           username = warning("You need a plotly username. See help(signup, package = 'plotly')", call. = FALSE),
-           api_key = warning("You need an api_key. See help(signup, package = 'plotly')", call. = FALSE))
-    warning("Couldn't find ", what, call. = FALSE)
-  }
-  as.character(val)
-}
-
-# Check whether a certain credential/configuration exists.
-grab <- function(what = "username") {
-  who <- paste0("plotly_", what)
-  val <- Sys.getenv(who, "")
-  # If the environment variable doesn't exist, try reading hidden files that may
-  # have been created using other languages or earlier versions of this package
-  if (val == "") {
-    PLOTLY_DIR <- file.path(normalizePath("~", mustWork = TRUE), ".plotly")
-    CREDENTIALS_FILE <- file.path(PLOTLY_DIR, ".credentials")
-    CONFIG_FILE <- file.path(PLOTLY_DIR, ".config")
-    # note: try_file can be 'succesful', yet return NULL
-    val2 <- try_file(CREDENTIALS_FILE, what)
-    val <- if (length(nchar(val2)) == 0) try_file(CONFIG_FILE, what) else val2
-    val <- val %||% ""
-  }
-  # return true if value is non-trivial
-  setNames(val, who)
-}
-
-# try to grab an object key from a JSON file (returns empty string on error)
-try_file <- function(f, what) {
-  tryCatch(jsonlite::read_json(f)[[what]], error = function(e) NULL)
-}
-
-# preferred defaults for toJSON mapping
-to_JSON <- function(x, ...) {
-  jsonlite::toJSON(x, digits = 50, auto_unbox = TRUE, force = TRUE,
-                   null = "null", na = "null", 
-                   time_format = "%Y-%m-%d %H:%M:%OS6",  ...)
-}
-
-# preferred defaults for toJSON mapping
-from_JSON <- function(x, ...) {
-  jsonlite::parse_json(x, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
-}
-
-# Box length-1 vectors as arrays (legacy i()).
-lp_i <- function(x) if (is.null(x)) NULL else if (length(x) == 1) I(x) else x
 
 # Evaluate formulas anywhere in a (nested) attribute list.
-lp_eval_attrs <- function(x, data) {
-  if (inherits(x, "formula")) return(lp_eval_attr(x, data))
+eval_attrs <- function(x, data) {
+  if (inherits(x, "formula")) return(eval_attr(x, data))
   if (is.list(x) && !is.data.frame(x)) {
     cls <- oldClass(x)
-    out <- lapply(x, lp_eval_attrs, data = data)
+    out <- lapply(x, eval_attrs, data = data)
     oldClass(out) <- cls
     return(out)
   }
@@ -1247,7 +290,7 @@ lp_eval_attrs <- function(x, data) {
 }
 
 # Grouping variables of a dplyr grouped_df, read without depending on dplyr.
-lp_group_vars <- function(d) {
+data_groups <- function(d) {
   # add_sf() data marks its group column with this attribute
   if (!is.null(attr(d, "plotly_groups"))) return(attr(d, "plotly_groups"))
   if (!inherits(d, "grouped_df")) return(character())
@@ -1258,7 +301,7 @@ lp_group_vars <- function(d) {
 # change within a session); FALSE marks a path without a validator.
 LP_SCHEMA_CACHE <- new.env(parent = emptyenv())
 
-lp_entry <- function(path) {
+entry <- function(path) {
   e <- LP_SCHEMA_CACHE[[path]]
   if (is.null(e)) {
     e <- get_validator(path) %||% FALSE
@@ -1291,69 +334,14 @@ rm_asis <- function(x) {
   else x
 }
 
-
-# add a class to an object only if it is new, and keep any existing classes of 
-# that object
-append_class <- function(x, y) {
-  structure(x, class = unique(c(class(x), y)))
-}
-
-lp_prefix_class <- function(x, y) structure(x, class = unique(c(y, oldClass(x))))
 prefix_class <- function(x, y) {
   structure(x, class = unique(c(y, class(x))))
 }
-replace_class <- function(x, new, old) {
-  class(x) <- sub(old, new, class(x))
-  x
-}
 
-lp_remove_class <- function(x, y) {
-  oldClass(x) <- setdiff(oldClass(x), y)
-  x
-}
 remove_class <- function(x, y) {
   oldClass(x) <- setdiff(oldClass(x), y)
   x
 }
-
-# TODO: what are some other common configuration options we want to support??
-get_domain <- function(type = "") {
-  if (type == "api") {
-    # new onprem instances don't have an https://api-thiscompany.plot.ly
-    # but https://thiscompany.plot.ly seems to just work in that case...
-    Sys.getenv("plotly_api_domain", Sys.getenv("plotly_domain", "https://api.plot.ly"))
-  } else {
-    Sys.getenv("plotly_domain", "https://plot.ly")
-  }
-}
-
-# plotly's special keyword arguments in POST body
-get_kwargs <- function() {
-  c("filename", "fileopt", "style", "traces", "layout", "frames", "world_readable")
-}
-
-
-# try to write environment variables to an .Rprofile
-cat_profile <- function(key, value, path = "~") {
-  r_profile <- file.path(normalizePath(path, mustWork = TRUE),
-                         ".Rprofile")
-  snippet <- sprintf('\nSys.setenv("plotly_%s" = "%s")', key, value)
-  if (!file.exists(r_profile)) {
-    message("Creating", r_profile)
-    r_profile_con <- file(r_profile)
-  }
-  if (file.access(r_profile, 2) != 0) {
-    stop("R doesn't have permission to write to this file: ", path, "\n",
-         "You should consider putting this in an .Rprofile ", "\n",
-         "(or sourcing it when you use plotly): ", snippet)
-  }
-  if (file.access(r_profile, 4) != 0) {
-    stop("R doesn't have permission to read this file: ", path)
-  }
-  message("Adding plotly_", key, " environment variable to ", r_profile)
-  cat(snippet, file = r_profile, append = TRUE)
-}
-
 
 # check that suggested packages are installed
 try_library <- function(pkg, fun = NULL) {

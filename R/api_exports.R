@@ -12,19 +12,19 @@ NULL
 
 #' @rdname chart-studio
 #' @export
-api_create <- function(...) lp_defunct("api_create", LP_CHART_STUDIO)
+api_create <- function(...) defunct("api_create", LP_CHART_STUDIO)
 
 
 #' @rdname chart-studio
 #' @export
-api_download_plot <- function(...) lp_defunct("api_download_plot", LP_CHART_STUDIO)
+api_download_plot <- function(...) defunct("api_download_plot", LP_CHART_STUDIO)
 
 
 #' @rdname chart-studio
 #' @export
-api_download_grid <- function(...) lp_defunct("api_download_grid", LP_CHART_STUDIO)
+api_download_grid <- function(...) defunct("api_download_grid", LP_CHART_STUDIO)
 
 
 #' @rdname chart-studio
 #' @export
-api <- function(...) lp_defunct("api", LP_CHART_STUDIO)
+api <- function(...) defunct("api", LP_CHART_STUDIO)

@@ -281,7 +281,7 @@ test_that("can handle inconsistent # of traces across frames & supply default co
   
   # ensure the animation defaults are supplied
   buttonArgs <- l$layout$updatemenus[[1]]$buttons[[1]]$args[[2]]
-  defaults <- lp_animation_defaults()
+  defaults <- animation_defaults()
   expect_identical(
     buttonArgs[names(defaults)], defaults
   )
@@ -327,7 +327,7 @@ test_that("can change animation defaults", {
   
   # the expectation for animation option values
   aniOpts <- modify_list(
-    rapply(lp_animation_defaults(), unclass, how = "list"), 
+    rapply(animation_defaults(), unclass, how = "list"), 
     list(
       frame = list(duration = 1200), 
       transition = list(duration = 1000, easing = "elastic")

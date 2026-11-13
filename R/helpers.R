@@ -2,7 +2,7 @@
 #' @export
 colorbar <- function(p, ..., limits = NULL, which = 1) {
   p <- plotly_build(p)
-  is_bar <- vapply(p$x$data, lp_is_colorbar, logical(1))
+  is_bar <- vapply(p$x$data, is.colorbar, logical(1))
   if (!any(is_bar)) {
     warning("Didn't find a colorbar to modify.", call. = FALSE)
     return(p)
@@ -33,8 +33,8 @@ colorbar <- function(p, ..., limits = NULL, which = 1) {
         })
       }
     }
-    if (z_color) p$x$data[[i]]$colorbar <- lp_modify_list(tr$colorbar, list(...))
-    else p$x$data[[i]]$marker$colorbar <- lp_modify_list(tr$marker$colorbar, list(...))
+    if (z_color) p$x$data[[i]]$colorbar <- modify_list(tr$colorbar, list(...))
+    else p$x$data[[i]]$marker$colorbar <- modify_list(tr$marker$colorbar, list(...))
   }
   p
 }
@@ -51,8 +51,8 @@ hide_colorbar <- function(p) {
   if (inherits(p, c("gg", "ggmatrix"))) p <- plotly_build(p)
   if (inherits(p, "go_figure")) {
     p <- for_each_trace(p, function(tr) {
-      if (lp_has_attr(tr$type, "showscale")) tr$showscale <- FALSE
-      if (lp_has_attr(tr$type, "marker.showscale")) tr$marker$showscale <- FALSE
+      if (has_attr(tr$type, "showscale")) tr$showscale <- FALSE
+      if (has_attr(tr$type, "marker.showscale")) tr$marker$showscale <- FALSE
       tr
     })
     return(update_layout(p, coloraxis_showscale = FALSE))
@@ -60,8 +60,8 @@ hide_colorbar <- function(p) {
   p <- plotly_build(p)
   for (i in seq_along(p$x$data)) {
     type <- p$x$data[[i]]$type
-    if (lp_has_attr(type, "showscale")) p$x$data[[i]]$showscale <- lp_default(FALSE)
-    if (lp_has_attr(type, "marker.showscale")) p$x$data[[i]]$marker$showscale <- lp_default(FALSE)
+    if (has_attr(type, "showscale")) p$x$data[[i]]$showscale <- default(FALSE)
+    if (has_attr(type, "marker.showscale")) p$x$data[[i]]$marker$showscale <- default(FALSE)
   }
   p
 }

@@ -131,7 +131,7 @@ invisible(plotly_build(plot_ly(d1, x = ~x, ymin = ~y, ymax = ~y + 1) |> add_ribb
 stopifnot(identical(d0, d1))
 
 # group ids order and group like interaction() codes
-gi <- plotly:::lp_group_index
+gi <- plotly:::group_index
 a <- factor(c("q", "p", "q", NA, "p"), levels = c("q", "p")); b <- c(2, 1, 1, 1, 2)
 stopifnot(
   identical(order(gi(list(a, b))), order(as.integer(interaction(a, b)))),

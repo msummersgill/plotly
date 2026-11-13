@@ -31,7 +31,7 @@ add_trace.plotly <- function(fig, ..., data = NULL, inherit = TRUE) {
   attrs$inherit <- inherit
   if (!is.null(attrs[["group"]])) warning("The group argument has been deprecated. Use split instead.", call. = FALSE)
   p <- add_data(fig, data)
-  if (inherit) attrs <- lp_modify_list(unclass(p$x$attrs[[1]]), attrs)
+  if (inherit) attrs <- modify_list(unclass(p$x$attrs[[1]]), attrs)
   p$x$attrs <- c(p$x$attrs %||l% list(), stats_named(list(attrs), p$x$cur_data))
   p
 }
@@ -41,7 +41,7 @@ add_trace.plotly <- function(fig, ..., data = NULL, inherit = TRUE) {
 add_data <- function(p, data = NULL) {
   if (is.null(data)) return(p)
   if (!is_legacy_plot(p)) stop("Don't know how to add data to an object of class: ", class(p)[[1]], call. = FALSE)
-  id <- lp_new_id()
+  id <- new_id()
   p$x$visdat[[id]] <- function() data
   p$x$cur_data <- id
   p
@@ -51,8 +51,8 @@ add_data <- function(p, data = NULL) {
 #' @rdname add_trace.plotly
 #' @export
 add_markers <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, z = z)
-  lp_require(v, c("x", "y"), "Must supply `x` and `y` attributes")
+  v <- inherit(p, inherit, x = x, y = y, z = z)
+  check_required(v, c("x", "y"), "Must supply `x` and `y` attributes")
   add_trace.plotly(p, x = v$x, y = v$y, z = v$z, type = if (!is.null(v$z)) "scatter3d" else "scatter",
                    mode = "markers", ..., data = data, inherit = inherit)
 }
@@ -61,8 +61,8 @@ add_markers <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inher
 #' @rdname add_trace.plotly
 #' @export
 add_text <- function(p, x = NULL, y = NULL, z = NULL, text = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, z = z, text = text)
-  lp_require(v, c("x", "y", "text"), "Must supply `x`, `y` and `text` attributes")
+  v <- inherit(p, inherit, x = x, y = y, z = z, text = text)
+  check_required(v, c("x", "y", "text"), "Must supply `x`, `y` and `text` attributes")
   add_trace.plotly(p, x = v$x, y = v$y, z = v$z, text = v$text, type = if (!is.null(v$z)) "scatter3d" else "scatter",
                    mode = "text", ..., data = data, inherit = inherit)
 }
@@ -71,18 +71,18 @@ add_text <- function(p, x = NULL, y = NULL, z = NULL, text = NULL, ..., data = N
 #' @rdname add_trace.plotly
 #' @export
 add_paths <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, z = z)
-  lp_require(v, c("x", "y"), "Must supply `x` and `y` attributes")
-  lp_add_classed(p, "plotly_path", x = v$x, y = v$y, z = v$z, type = if (!is.null(v$z)) "scatter3d" else "scatter",
+  v <- inherit(p, inherit, x = x, y = y, z = z)
+  check_required(v, c("x", "y"), "Must supply `x` and `y` attributes")
+  add_classed(p, "plotly_path", x = v$x, y = v$y, z = v$z, type = if (!is.null(v$z)) "scatter3d" else "scatter",
                  mode = "lines", ..., data = data, inherit = inherit)
 }
 
 #' @rdname add_trace.plotly
 #' @export
 add_lines <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, z = z)
-  lp_require(v, c("x", "y"), "Must supply `x` and `y` attributes")
-  lp_add_classed(p, "plotly_line", x = v$x, y = v$y, type = if (!is.null(v$z)) "scatter3d" else "scatter",
+  v <- inherit(p, inherit, x = x, y = y, z = z)
+  check_required(v, c("x", "y"), "Must supply `x` and `y` attributes")
+  add_classed(p, "plotly_line", x = v$x, y = v$y, type = if (!is.null(v$z)) "scatter3d" else "scatter",
                  mode = "lines", ..., data = data, inherit = inherit)
 }
 
@@ -90,9 +90,9 @@ add_lines <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit
 #' @rdname add_trace.plotly
 #' @export
 add_segments <- function(p, x = NULL, y = NULL, xend = NULL, yend = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, xend = xend, yend = yend)
-  lp_require(v, c("x", "y", "xend", "yend"), "Must supply `x`/`y`/`xend`/`yend` attributes")
-  lp_add_classed(p, "plotly_segment", x = v$x, y = v$y, xend = v$xend, yend = v$yend, type = "scatter",
+  v <- inherit(p, inherit, x = x, y = y, xend = xend, yend = yend)
+  check_required(v, c("x", "y", "xend", "yend"), "Must supply `x`/`y`/`xend`/`yend` attributes")
+  add_classed(p, "plotly_segment", x = v$x, y = v$y, xend = v$xend, yend = v$yend, type = "scatter",
                  mode = "lines", ..., data = data, inherit = inherit)
 }
 
@@ -100,9 +100,9 @@ add_segments <- function(p, x = NULL, y = NULL, xend = NULL, yend = NULL, ..., d
 #' @rdname add_trace.plotly
 #' @export
 add_polygons <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y)
-  lp_require(v, c("x", "y"), "Must supply `x`/`y` attributes")
-  lp_add_classed(p, "plotly_polygon", x = v$x, y = v$y, type = "scatter", fill = "toself", mode = "lines",
+  v <- inherit(p, inherit, x = x, y = y)
+  check_required(v, c("x", "y"), "Must supply `x`/`y` attributes")
+  add_classed(p, "plotly_polygon", x = v$x, y = v$y, type = "scatter", fill = "toself", mode = "lines",
                  ..., data = data, inherit = inherit)
 }
 
@@ -140,19 +140,19 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
     stop("The `data` for an `add_sf()` layer must be an sf object, not an object of class: ",
          class(dat)[1], call. = FALSE)
   }
-  if (lp_is_geo(p)) dat <- lp_sf_crs(dat)
+  if (is_geo(p)) dat <- sf_crs(dat)
   bbox <- as.list(sf::st_bbox(dat))
   set <- attr(dat, "set")
-  d <- lp_sf_basic(dat)
-  attrz <- if (inherit) lp_modify_list(unclass(p$x$attrs[[1]]), list(...)) else list(...)
+  d <- sf_basic(dat)
+  attrz <- if (inherit) modify_list(unclass(p$x$attrs[[1]]), list(...)) else list(...)
   for (i in seq_along(d)) {
-    attrs <- lp_modify_list(lp_sf_default_attrs(d[[i]]), attrz)
+    attrs <- modify_list(sf_default_attrs(d[[i]]), attrz)
     # scatter3d doesn't support fill
     if ("z" %in% names(attrs)) attrs$fill <- NULL
     args <- list(p = p, class = "plotly_sf", x = x, y = y, `_bbox` = bbox, set = set,
                  data = d[[i]], inherit = inherit)
-    args <- lp_modify_list(args, attrs)
-    p <- do.call(lp_add_classed, args)
+    args <- modify_list(args, attrs)
+    p <- do.call(add_classed, args)
   }
   p
 }
@@ -161,9 +161,9 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
 #' @rdname add_trace.plotly
 #' @export
 add_ribbons <- function(p, x = NULL, ymin = NULL, ymax = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, ymin = ymin, ymax = ymax)
-  lp_require(v, c("x", "ymin", "ymax"), "Must supply `x`/`ymin`/`ymax` attributes")
-  lp_add_classed(p, c("plotly_ribbon", "plotly_polygon"), x = v$x, ymin = v$ymin, ymax = v$ymax, type = "scatter",
+  v <- inherit(p, inherit, x = x, ymin = ymin, ymax = ymax)
+  check_required(v, c("x", "ymin", "ymax"), "Must supply `x`/`ymin`/`ymax` attributes")
+  add_classed(p, c("plotly_ribbon", "plotly_polygon"), x = v$x, ymin = v$ymin, ymax = v$ymax, type = "scatter",
                  mode = "lines", hoveron = "points", fill = "toself", ..., data = data, inherit = inherit)
 }
 
@@ -172,40 +172,40 @@ add_ribbons <- function(p, x = NULL, ymin = NULL, ymax = NULL, ..., data = NULL,
 #' @export
 add_area <- function(p, r = NULL, theta = NULL, t = NULL, ..., data = NULL, inherit = TRUE) {
   if (!is.null(t)) message("Since `add_area()` now uses the barpolar trace, the `t` argument is deprecated. Use `theta` instead.")
-  v <- lp_inherit(p, inherit, r = r, theta = theta %||l% t)
-  lp_require(v, c("r", "theta"), "Must supply `r`/`theta` attributes")
-  lp_add_classed(p, "plotly_area", r = v$r, theta = v$theta, type = "barpolar", ..., data = data, inherit = inherit)
+  v <- inherit(p, inherit, r = r, theta = theta %||l% t)
+  check_required(v, c("r", "theta"), "Must supply `r`/`theta` attributes")
+  add_classed(p, "plotly_area", r = v$r, theta = v$theta, type = "barpolar", ..., data = data, inherit = inherit)
 }
 
 
 #' @rdname add_trace.plotly
 #' @export
 add_bars <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y)
-  lp_require(v, c("x", "y"), "Must supply `x`/`y` attributes")
-  lp_add_classed(p, "plotly_bar", x = v$x, y = v$y, type = "bar", ..., data = data, inherit = inherit)
+  v <- inherit(p, inherit, x = x, y = y)
+  check_required(v, c("x", "y"), "Must supply `x`/`y` attributes")
+  add_classed(p, "plotly_bar", x = v$x, y = v$y, type = "bar", ..., data = data, inherit = inherit)
 }
 
 
 #' @rdname add_trace.plotly
 #' @export
 add_boxplot <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y)
+  v <- inherit(p, inherit, x = x, y = y)
   if (is.null(v$x) && is.null(v$y)) stop("Must supply either `x` or `y` attribute", call. = FALSE)
-  lp_add_classed(p, "plotly_boxplot", x = v$x, y = v$y, type = "box", ..., data = data, inherit = inherit)
+  add_classed(p, "plotly_boxplot", x = v$x, y = v$y, type = "box", ..., data = data, inherit = inherit)
 }
 
 
 #' @rdname add_trace.plotly
 #' @export
 add_mesh <- function(p, x = NULL, y = NULL, z = NULL, ..., data = NULL, inherit = TRUE) {
-  v <- lp_inherit(p, inherit, x = x, y = y, z = z)
-  lp_require(v, c("x", "y", "z"), "Must supply `x`/`y`/`z` attributes")
-  lp_add_classed(p, "plotly_mesh", x = v$x, y = v$y, z = v$z, type = "mesh3d", ..., data = data, inherit = inherit)
+  v <- inherit(p, inherit, x = x, y = y, z = z)
+  check_required(v, c("x", "y", "z"), "Must supply `x`/`y`/`z` attributes")
+  add_classed(p, "plotly_mesh", x = v$x, y = v$y, z = v$z, type = "mesh3d", ..., data = data, inherit = inherit)
 }
 
 
-lp_special_attrs <- function(trace) {
+special_attrs <- function(trace) {
   out <- switch(class(trace)[[1]] %||l% "", plotly_segment = c("xend", "yend"), plotly_ribbon = c("ymin", "ymax"), NULL)
   if (isTRUE(trace[["type"]] %in% c("scattermap", "scattergeo"))) out <- c(out, "x", "y")
   out

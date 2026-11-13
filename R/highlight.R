@@ -1,8 +1,8 @@
 LP_CT_KEY <- ".crossTalkKey"
 
-lp_is_shared <- function(x) inherits(x, "SharedData")
+is_shared <- function(x) inherits(x, "SharedData")
 
-lp_require_crosstalk <- function() {
+require_crosstalk <- function() {
   if (!requireNamespace("crosstalk", quietly = TRUE)) {
     stop("Linked highlighting needs the crosstalk package: install.packages(\"crosstalk\")", call. = FALSE)
   }
@@ -10,8 +10,8 @@ lp_require_crosstalk <- function() {
 
 # SharedData -> its data with the key column and a "set" attribute (the
 # crosstalk group).
-lp_shared_data <- function(dat) {
-  if (!lp_is_shared(dat)) return(dat)
+shared_data <- function(dat) {
+  if (!is_shared(dat)) return(dat)
   key <- dat$key()
   set <- dat$groupName()
   d <- dat$origData()
@@ -90,7 +90,7 @@ highlight <- function(p, on = "plotly_click", off, persistent = getOption("persi
     color <- color[1]
   }
   off_options <- paste0("plotly_", c("doubleclick", "deselect", "relayout"))
-  off <- if (missing(off)) lp_default(lp_highlight_off(on)) else if (!is.null(off)) match.arg(off, off_options)
+  off <- if (missing(off)) default(highlight_off(on)) else if (!is.null(off)) match.arg(off, off_options)
   if (isTRUE(persistent)) {
     message("We recommend setting `persistent` to `FALSE` (the default) because persistent selection mode ",
             "can now be used by holding the shift key (while triggering the `on` event).")
@@ -110,7 +110,7 @@ highlight <- function(p, on = "plotly_click", off, persistent = getOption("persi
   p
 }
 
-lp_highlight_off <- function(on) {
+highlight_off <- function(on) {
   switch(on %||l% "",
     plotly_selecting = , plotly_selected = "plotly_deselect",
     plotly_click = , plotly_hover = "plotly_doubleclick",
@@ -137,8 +137,8 @@ attrs_selected <- function(opacity = 1, ...) {
 
 # Build step: highlight defaults, crosstalk groups, selectize payloads and
 # the default dragmode (legacy supply_highlight_attrs()).
-lp_supply_highlight_attrs <- function(p) {
-  p$x$highlight <- p$x$highlight %||l% lp_highlight_defaults()
+supply_highlight_attrs <- function(p) {
+  p$x$highlight <- p$x$highlight %||l% highlight_defaults()
   sets <- lapply(p$x$data, `[[`, "set")
   no_set <- vapply(sets, is.null, logical(1))
   if (all(no_set)) return(p)
@@ -155,7 +155,7 @@ lp_supply_highlight_attrs <- function(p) {
     selectize <- hl$selectize %||l% FALSE
     if (!identical(selectize, FALSE)) {
       opts <- list(items = data.frame(value = raw_k, label = raw_k, stringsAsFactors = FALSE), group = g)
-      if (!is.logical(selectize)) opts <- lp_modify_list(opts, selectize)
+      if (!is.logical(selectize)) opts <- modify_list(opts, selectize)
       old <- p$x$selectize[[g]]
       if (length(old)) {
         if (length(setdiff(k, old$items$value))) {
@@ -169,18 +169,18 @@ lp_supply_highlight_attrs <- function(p) {
     }
   }
   drag <- switch(hl$on %||l% "", plotly_selected = , plotly_selecting = "select", "zoom")
-  p$x$layout$dragmode <- p$x$layout$dragmode %|D|% lp_default(drag)
-  if (lp_is_default(hl$off)) {
+  p$x$layout$dragmode <- p$x$layout$dragmode %|D|% default(drag)
+  if (is_default(hl$off)) {
     message(sprintf("Setting the `off` event (i.e., '%s') to match the `on` event (i.e., '%s'). You can change this default via the `highlight()` function.",
-                    lp_remove_class(hl$off, "plotly_default"), hl$on))
-    p$x$highlight$off <- lp_remove_class(hl$off, "plotly_default")
+                    remove_class(hl$off, "plotly_default"), hl$on))
+    p$x$highlight$off <- remove_class(hl$off, "plotly_default")
   }
   p
 }
 
 # legacy_figure(): move keys and sets out of the traces and frames (and drop
 # add_sf()'s internal bounding boxes).
-lp_extract_keys <- function(x) {
+extract_keys <- function(x) {
   take <- function(traces, what) {
     v <- lapply(traces, `[[`, what)
     if (all(vapply(v, is.null, logical(1)))) NULL else v
@@ -216,15 +216,13 @@ lp_extract_keys <- function(x) {
   x
 }
 
-highlight_defaults <- function() lp_highlight_defaults()
-
 
 # ----------------------------------------------------------------------------
 # Utility functions
 # ----------------------------------------------------------------------------
 
 
-lp_highlight_defaults <- function() {
+highlight_defaults <- function() {
   list(on = "plotly_click", off = "plotly_doubleclick", persistent = getOption("persistent", FALSE),
        dynamic = FALSE, selectize = FALSE, opacityDim = getOption("opacityDim", 0.2),
        selected = attrs_selected(), debounce = 0)

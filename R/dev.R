@@ -15,7 +15,7 @@
 #' names(s$traces)
 schema <- function(jsonedit = interactive(), ...) {
   s <- plotly.core::schema(jsonedit = FALSE)
-  s$transforms <- lp_transforms_schema()
+  s$transforms <- transforms_schema()
   if (jsonedit) {
     if (!requireNamespace("listviewer", quietly = TRUE)) stop("schema(jsonedit = TRUE) needs the listviewer package", call. = FALSE)
     print(listviewer::jsonedit(s, mode = "form"))
@@ -25,7 +25,7 @@ schema <- function(jsonedit = interactive(), ...) {
 
 # The transforms plot_ly() applies (R/lp-transforms.R), in the form of
 # plotly.js 2's schema.
-lp_transforms_schema <- function() {
+transforms_schema <- function() {
   enum <- function(values, dflt) list(valType = "enumerated", values = values, dflt = dflt)
   list(
     filter = list(attributes = list(

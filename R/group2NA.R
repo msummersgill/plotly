@@ -34,7 +34,7 @@ group2NA <- function(data, groupNames = "group", nested = NULL, ordered = NULL,
   datClass <- oldClass(data)
   
   # data.table doesn't play nice with list-columns
-  if (inherits(data, "sf")) data <- lp_fortify_sf(data)
+  if (inherits(data, "sf")) data <- fortify_sf(data)
   
   # evaluate this lazy argument now (in case we change class of data)
   retrace <- force(retrace.first)
