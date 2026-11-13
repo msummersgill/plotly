@@ -1,58 +1,8 @@
-# Simple features (sf) layers for plot_ly() objects: a port of the legacy
-# plotly package's add_sf(), to_basic.GeomSf(), fortify_sf(),
-# sf_default_attrs() and fit_bounds() (R/add.R, R/layers2traces.R, R/sf.R,
-# R/utils.R in plotly.R), without dplyr and rlang. lp_sf_crs() is written for
-# this package (the legacy st_cast_crs() came from the leaflet package).
+# IMPORTANT: fortify_sf() should only be used on collections of identical 
+# geometries -- https://github.com/r-spatial/sf/issues/584
 
-#' Add a simple features (sf) layer
-#'
-#' Draws the geometries of an [sf](https://r-spatial.github.io/sf/) object:
-#' polygons as filled outlines, lines as paths and points as markers (one
-#' trace per geometry kind). Works with [plot_ly()] (cartesian, with an equal
-#' aspect ratio), [plot_geo()] and [plot_mapbox()]; `plot_ly()` with sf data
-#' and no layers adds one automatically. Requires the sf package.
-#'
-#' For maps, data are transformed to longitude/latitude (WGS84, EPSG:4326)
-#' when they use another coordinate reference system (with a warning); data
-#' with none are assumed to be EPSG:4326. The initial view fits the data.
-#'
-#' @param p A [plot_ly()] object.
-#' @param ... Trace attributes (e.g. `color`, `split`, `text`, `hoverinfo`).
-#' @param x,y Coordinates (default: the geometries' coordinates).
-#' @param data An sf object (default: the plot's data).
-#' @param inherit Inherit attributes from [plot_ly()]?
-#' @return The plot.
-#' @export
-#' @examplesIf requireNamespace("sf", quietly = TRUE)
-#' nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
-#' nc |> plot_ly()
-#' nc |> plot_ly() |> add_sf(color = ~AREA, split = ~NAME, hoverinfo = "text", text = ~NAME)
-#' nc |> plot_geo() |> add_sf(color = I("gray50"))
-add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
-  if (!requireNamespace("sf", quietly = TRUE)) {
-    stop("add_sf() needs the sf package: install.packages(\"sf\")", call. = FALSE)
-  }
-  dat <- plotly_data(add_data(p, data))
-  if (!inherits(dat, "sf")) {
-    stop("The `data` for an `add_sf()` layer must be an sf object, not an object of class: ",
-         class(dat)[1], call. = FALSE)
-  }
-  if (lp_is_geo(p)) dat <- lp_sf_crs(dat)
-  bbox <- as.list(sf::st_bbox(dat))
-  set <- attr(dat, "set")
-  d <- lp_sf_basic(dat)
-  attrz <- if (inherit) lp_modify_list(unclass(p$x$attrs[[1]]), list(...)) else list(...)
-  for (i in seq_along(d)) {
-    attrs <- lp_modify_list(lp_sf_default_attrs(d[[i]]), attrz)
-    # scatter3d doesn't support fill
-    if ("z" %in% names(attrs)) attrs$fill <- NULL
-    args <- list(p = p, class = "plotly_sf", x = x, y = y, `_bbox` = bbox, set = set,
-                 data = d[[i]], inherit = inherit)
-    args <- lp_modify_list(args, attrs)
-    p <- do.call(lp_add_classed, args)
-  }
-  p
-}
+# Note how, in to_basic.GeomSf(), we split data into a list of data.frames
+# (each data frame has at most one geometry type).
 
 # Longitude/latitude (WGS84) coordinates, as needed by geo and map traces.
 lp_sf_crs <- function(x) {
@@ -121,6 +71,7 @@ lp_fortify_sf <- function(model) {
   d
 }
 
+
 lp_sf_default_attrs <- function(d) {
   switch(attr(d, "sf_kind"),
     polygon = list(mode = "lines", fill = "toself"),
@@ -173,3 +124,13 @@ lp_bboxes2range <- function(bboxes, ...) {
   list(yrng = grDevices::extendrange(range(get("ymin"), get("ymax"), na.rm = TRUE), ...),
        xrng = grDevices::extendrange(range(get("xmin"), get("xmax"), na.rm = TRUE), ...))
 }
+
+fortify_sf <- function(model, ...) {
+  d <- lp_fortify_sf(model)
+  set <- attr(d, "set")
+  d <- as.data.frame(d)
+  attr(d, "set") <- set
+  d
+}
+
+

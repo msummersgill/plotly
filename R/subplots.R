@@ -1,6 +1,3 @@
-# subplot() from the legacy plotly R package: combine several plots into one,
-# arranging their axes (and geo/map subplots) in a grid.
-
 #' Combine plots into a grid of subplots
 #'
 #' Arranges several plots in one figure, like the legacy plotly package's
@@ -196,6 +193,14 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
   legacy_widget_lazy(out)
 }
 
+# Names used by the ggplotly() code
+get_domains <- function(...) lp_get_domains(...)
+
+# ----------------------------------------------------------------
+# Functions used solely within subplot()
+# ----------------------------------------------------------------
+
+
 lp_get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL, heights = NULL) {
   if (length(margins) == 1) margins <- rep(margins, 4)
   if (length(margins) != 4) stop("margins must be length 1 or 4", call. = FALSE)
@@ -222,6 +227,7 @@ lp_get_domains <- function(nplots = 1, nrows = 1, margins = 0.01, widths = NULL,
   as.data.frame(do.call(rbind, Map(c, xz, ys)))
 }
 
+
 lp_reposition <- function(obj, domains) {
   xd <- as.numeric(domains[c("xstart", "xend")])
   yd <- as.numeric(domains[c("yend", "ystart")])
@@ -240,6 +246,7 @@ lp_reposition <- function(obj, domains) {
   }
   obj
 }
+
 
 # Re-assign colorway colors (marked by the build step) after combining plots.
 lp_colorway_retrain <- function(traces, colorway) {
@@ -260,3 +267,5 @@ lp_colorway_retrain <- function(traces, colorway) {
   }
   traces
 }
+
+

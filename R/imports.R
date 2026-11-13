@@ -171,3 +171,58 @@ dplyr::filter_
 # #' @rdname reexports
 # #' @export
 # tidyr::gather_
+
+# Functions of plotly 4.x that plotly.core now provides --------------------------------
+
+#' @export
+plotly.core::add_trace
+#' @export
+plotly.core::add_choropleth
+#' @export
+plotly.core::add_contour
+#' @export
+plotly.core::add_heatmap
+#' @export
+plotly.core::add_histogram
+#' @export
+plotly.core::add_histogram2d
+#' @export
+plotly.core::add_histogram2dcontour
+#' @export
+plotly.core::add_image
+#' @export
+plotly.core::add_pie
+#' @export
+plotly.core::add_scattergeo
+#' @export
+plotly.core::add_surface
+#' @export
+plotly.core::add_table
+#' @export
+plotly.core::as_widget
+#' @export
+plotly.core::config
+#' @export
+plotly.core::event_data
+#' @export
+plotly.core::event_register
+#' @export
+plotly.core::event_unregister
+#' @export
+plotly.core::kaleido
+#' @export
+plotly.core::last_plot
+#' @export
+plotly.core::plotlyOutput
+#' @export
+plotly.core::plotlyProxy
+#' @export
+plotly.core::plotlyProxyInvoke
+#' @export
+plotly.core::plotly_json
+#' @export
+plotly.core::renderPlotly
+#' @export
+plotly.core::save_image
+#' @export
+plotly.core::TeX

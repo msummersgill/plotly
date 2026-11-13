@@ -50,6 +50,8 @@ is.discrete <- function(x) {
   if (!is.default(x)) x %||% y else y
 }
 
+lp_br <- function() "<br />"
+
 # standard way to specify a line break
 br <- function() "<br />"
 
@@ -57,12 +59,39 @@ is.default <- function(x) {
   inherits(x, "plotly_default")
 }
 
+# "Default" values are set by the build step and give way to anything the
+# user specifies (the legacy package's default()/is.default()).
+lp_default <- function(x) lp_prefix_class(x %||l% list(), "plotly_default")
+
+lp_is_default <- function(x) inherits(x, "plotly_default")
+
+# The legacy package's %||%: falls back for NULL *and* zero-length values.
+`%||l%` <- function(x, y) if (length(x) > 0) x else y
+
 default <- function(x) {
   prefix_class(x %||% list(), "plotly_default")
 }
 
 compact <- function(x) {
   Filter(Negate(is.null), x)
+}
+
+lp_modify_list <- function(x, y) utils::modifyList(x %||l% list(), y %||l% list())
+
+lp_is_discrete <- function(x) is.factor(x) || is.character(x) || is.logical(x)
+
+lp_get_levels <- function(x) if (is.factor(x)) levels(x) else sort(unique(x))
+
+lp_uniq <- function(x) {
+  u <- unique(x)
+  if (identical(u, NA) || length(u) == 0) return(u)
+  u <- u[!is.na(u)]
+  if (length(u) == 1) u else x
+}
+
+lp_deparse <- function(x) {
+  if (is.null(x) || !is.language(x)) return(NULL)
+  sub("^~", "", paste(deparse(x, 500L), collapse = ""))
 }
 
 modify_list <- function(x, y, ...) {
@@ -95,6 +124,8 @@ deparse2 <- function(x) {
   sub("^~", "", paste(deparse(x, 500L), collapse = ""))
 }
 
+lp_new_id <- function() basename(tempfile(""))
+
 new_id <- function() {
   basename(tempfile(""))
 }
@@ -109,6 +140,19 @@ getLevels <- function(x) {
 
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
 
+lp_is_tidy <- function(trace) {
+  !(trace[["type"]] %||l% "scatter") %in% c("mesh3d", "heatmap", "histogram2d", "isosurface",
+                                         "histogram2dcontour", "contour", "surface")
+}
+
+LP_NPSCALES <- c("color", "stroke", "symbol", "linetype", "size", "span", "split")
+
+LP_GL_TYPES <- c("scattergl", "scatter3d", "mesh3d", "heatmapgl", "pointcloud", "parcoords", "surface")
+
+# plotly.js's default colorway (the legacy package doesn't apply templates).
+LP_COLORWAY <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
+                 "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+
 # Don't attempt to do "tidy" data training on these trace types
 # Note that non-tidy traces expect/anticipate data_array's of varying lengths
 is_tidy <- function(trace) {
@@ -117,6 +161,11 @@ is_tidy <- function(trace) {
     "mesh3d", "heatmap", "histogram2d", "isosurface",
     "histogram2dcontour", "contour", "surface"
   )
+}
+
+lp_has_group <- function(trace) {
+  inherits(trace, paste0("plotly_", c("segment", "path", "line", "polygon"))) ||
+    (grepl("scatter", trace[["type"]] %||l% "") && grepl("lines", trace[["mode"]] %||l% ""))
 }
 
 # is grouping relevant for this geometry? (e.g., grouping doesn't effect a scatterplot)
@@ -129,6 +178,160 @@ has_group <- function(trace) {
 npscales <- function() {
   c("color", "stroke", "symbol", "linetype", "size", "span", "split")
 }
+
+lp_colorway <- function(p = NULL) {
+  lapply(as.list(p$x$layout$colorway %||l% LP_COLORWAY), function(x) structure(x, class = "colorway"))
+}
+
+lp_rescale <- function(x, to = c(0, 1), from = range(x, na.rm = TRUE)) {
+  if (diff(from) == 0) return(ifelse(is.na(x), NA, mean(to)))
+  (x - from[1]) / diff(from) * diff(to) + to[1]
+}
+
+# A palette given as RColorBrewer/viridis names or a vector of colors, as a
+# function of n (scales' toPaletteFunc()).
+lp_palette_fun <- function(pal) {
+  if (is.character(pal) && length(pal) == 1 && pal %in% rownames(RColorBrewer::brewer.pal.info)) {
+    maxn <- RColorBrewer::brewer.pal.info[pal, "maxcolors"]
+    cols <- RColorBrewer::brewer.pal(maxn, pal)
+    return(function(n) if (n <= maxn) RColorBrewer::brewer.pal(max(n, 3L), pal)[seq_len(n)] else lp_ramp(cols)(seq(0, 1, length.out = n)))
+  }
+  if (is.character(pal) && length(pal) == 1 && pal %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
+    return(function(n) substr(viridisLite::viridis(n, option = pal), 1, 7))
+  }
+  ramp <- lp_ramp(pal)
+  function(n) if (n == 1) ramp(0) else ramp(seq(0, 1, length.out = n))
+}
+
+# Interpolate colors in CIE Lab space (like scales::colour_ramp()); values
+# that fall exactly on a palette color return it unchanged.
+lp_ramp <- function(colors) {
+  # a color interpolation function such as colorRamp() (RGB matrix, 0-255)
+  # or one returning colors, of values in [0, 1] (as scales' palettes)
+  if (is.function(colors)) {
+    return(function(x) {
+      out <- rep(NA_character_, length(x))
+      ok <- !is.na(x)
+      if (any(ok)) {
+        res <- colors(pmin(pmax(x[ok], 0), 1))
+        if (is.matrix(res)) res <- grDevices::rgb(res[, 1:3, drop = FALSE], maxColorValue = 255)
+        out[ok] <- res
+      }
+      out
+    })
+  }
+  f <- grDevices::colorRamp(colors, space = "Lab", interpolate = "linear")
+  hex <- substr(grDevices::rgb(t(grDevices::col2rgb(colors)), maxColorValue = 255), 1, 7)
+  m <- length(colors)
+  function(x) {
+    out <- rep(NA_character_, length(x))
+    ok <- !is.na(x)
+    if (any(ok)) {
+      xv <- pmin(pmax(x[ok], 0), 1)
+      rgbm <- f(xv)
+      res <- grDevices::rgb(round(rgbm[, 1]), round(rgbm[, 2]), round(rgbm[, 3]), maxColorValue = 255)
+      pos <- xv * (m - 1)
+      exact <- abs(pos - round(pos)) < 1e-9
+      res[exact] <- hex[round(pos[exact]) + 1]
+      out[ok] <- res
+    }
+    out
+  }
+}
+
+lp_col_factor <- function(pal, levels, na.color = "transparent") {
+  if (!is.null(names(pal))) {
+    return(function(x) {
+      out <- unname(pal[as.character(x)])
+      out[is.na(out)] <- na.color
+      out
+    })
+  }
+  cols <- lp_palette_fun(pal)(length(levels))
+  function(x) {
+    out <- cols[match(as.character(x), levels)]
+    out[is.na(out)] <- na.color
+    out
+  }
+}
+
+lp_col_numeric <- function(pal, domain, na.color = "transparent") {
+  ramp <- if (is.character(pal) && length(pal) == 1) lp_ramp(lp_palette_fun(pal)(256)) else lp_ramp(pal)
+  function(x) {
+    out <- ramp(lp_rescale(x, from = domain))
+    out[is.na(out)] <- na.color
+    out
+  }
+}
+
+# R plotting symbols/line types -> plotly.js names (legacy pch2symbol/lty2dash).
+LP_PCH <- c("0" = "square-open", "1" = "circle-open", "2" = "triangle-up-open", "3" = "cross-thin-open",
+            "4" = "x-thin-open", "5" = "diamond-open", "6" = "triangle-down-open", "7" = "square-x-open",
+            "8" = "asterisk-open", "9" = "diamond-x-open", "10" = "circle-cross-open", "11" = "hexagram-open",
+            "12" = "square-cross-open", "13" = "circle-x-open", "14" = "square-open-dot", "15" = "square",
+            "16" = "circle", "17" = "triangle-up", "18" = "diamond", "19" = "circle", "20" = "circle",
+            "21" = "circle", "22" = "square", "23" = "diamond", "24" = "triangle-up", "25" = "triangle-down",
+            "32" = "circle", "35" = "hash-open", "42" = "asterisk-open", "43" = "cross-thin-open",
+            "45" = "line-ew-open", "47" = "line-ne-open", "48" = "circle-open", "79" = "circle-open",
+            "88" = "x-thin-open", "92" = "line-nw-open", "95" = "line-ew-open", "111" = "circle-open",
+            "o" = "circle-open", "O" = "circle-open", "+" = "cross-thin-open")
+
+LP_LTY <- c("0" = "none", "1" = "solid", "2" = "dash", "3" = "dot", "4" = "dashdot", "5" = "longdash",
+            "6" = "longdashdot", "blank" = "none", "solid" = "solid", "dashed" = "dash", "dotted" = "dot",
+            "dotdash" = "dashdot", "longdash" = "longdash", "twodash" = "longdashdot", "22" = "dash",
+            "42" = "dot", "44" = "dashdot", "13" = "longdash", "1343" = "longdashdot", "73" = "dash",
+            "2262" = "dashdot", "12223242" = "dashdot", "F282" = "dash", "F4448444" = "dash",
+            "224282F2" = "dash", "F1" = "dash")
+
+lp_lookup <- function(x, table) {
+  x <- as.character(x)
+  idx <- x %in% names(table)
+  x[idx] <- table[x[idx]]
+  x
+}
+
+# A figure (or part) as plain lists and vectors.
+lp_plain_value <- function(x) {
+  if (is.list(x)) {
+    x <- unclass(x)
+    x[] <- lapply(x, lp_plain_value)
+  } else if (inherits(x, "AsIs")) {
+    # drop only AsIs: I(<POSIXct>) must stay a POSIXct
+    oldClass(x) <- setdiff(oldClass(x), "AsIs")
+  }
+  x
+}
+
+# Set a value at a path of names, creating lists along the way (a NULL value
+# is stored, not dropped).
+lp_set_path_value <- function(x, path, value) {
+  if (length(path) == 1L) {
+    x[path] <- list(value)
+    return(x)
+  }
+  x[[path[[1L]]]] <- lp_set_path_value(x[[path[[1L]]]] %||l% list(), path[-1L], value)
+  x
+}
+
+stats_named <- function(x, nm) {
+  names(x) <- nm
+  x
+}
+
+is_legacy_plot <- function(p) inherits(p, "plotly") && inherits(p, "htmlwidget")
+
+# Range of the values (NULL if there are none, e.g. a splom trace's x).
+lp_range <- function(v) {
+  v <- unlist(v)
+  if (!length(v) || all(is.na(v))) return(NULL)
+  range(v, na.rm = TRUE)
+}
+
+# The events plotly.core's widget sends to Shiny by default.
+lp_default_events <- function() unclass(plotly.core::plotly_widget(list())$x$shinyEvents)
+
+# data.table symbols used by group2NA()
+utils::globalVariables(c(".I", ".N"))
 
 colorway <- function(p = NULL) {
   colway <- p$x$layout$colorway %||% Schema$layout$layoutAttributes$colorway$dflt
@@ -469,7 +672,6 @@ verify_attr_names <- function(p) {
   }
   invisible(p)
 }
-
 
 
 # ensure both the layout and trace attributes adhere to the plot schema
@@ -951,6 +1153,10 @@ has_color_array <- function(types, mode = "marker") {
   vapply(types, function(x) isTRUE(tryNULL(Schema$traces[[x]]$attributes[[mode]]$color$arrayOk)), logical(1))
 }
 
+lp_has_attr <- function(types, attr = "marker") {
+  vapply(types, function(t) !is.null(lp_entry(paste0(t %||l% "scatter", ".", attr))), logical(1))
+}
+
 has_attr <- function(types, attr = "marker") {
   if (length(attr) != 1) stop("attr must be of length 1")
   vapply(types, function(x) attr %in% names(Schema$traces[[x]]$attributes), logical(1))
@@ -1025,6 +1231,42 @@ from_JSON <- function(x, ...) {
   jsonlite::parse_json(x, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
 }
 
+# Box length-1 vectors as arrays (legacy i()).
+lp_i <- function(x) if (is.null(x)) NULL else if (length(x) == 1) I(x) else x
+
+# Evaluate formulas anywhere in a (nested) attribute list.
+lp_eval_attrs <- function(x, data) {
+  if (inherits(x, "formula")) return(lp_eval_attr(x, data))
+  if (is.list(x) && !is.data.frame(x)) {
+    cls <- oldClass(x)
+    out <- lapply(x, lp_eval_attrs, data = data)
+    oldClass(out) <- cls
+    return(out)
+  }
+  x
+}
+
+# Grouping variables of a dplyr grouped_df, read without depending on dplyr.
+lp_group_vars <- function(d) {
+  # add_sf() data marks its group column with this attribute
+  if (!is.null(attr(d, "plotly_groups"))) return(attr(d, "plotly_groups"))
+  if (!inherits(d, "grouped_df")) return(character())
+  setdiff(names(attr(d, "groups")), ".rows")
+}
+
+# Schema lookups made for every trace are memoised here (the schema doesn't
+# change within a session); FALSE marks a path without a validator.
+LP_SCHEMA_CACHE <- new.env(parent = emptyenv())
+
+lp_entry <- function(path) {
+  e <- LP_SCHEMA_CACHE[[path]]
+  if (is.null(e)) {
+    e <- get_validator(path) %||% FALSE
+    assign(path, e, envir = LP_SCHEMA_CACHE)
+  }
+  if (isFALSE(e)) NULL else e
+}
+
 i <- function(x) {
   if (is.null(x)) {
     return(NULL)
@@ -1055,11 +1297,18 @@ rm_asis <- function(x) {
 append_class <- function(x, y) {
   structure(x, class = unique(c(class(x), y)))
 }
+
+lp_prefix_class <- function(x, y) structure(x, class = unique(c(y, oldClass(x))))
 prefix_class <- function(x, y) {
   structure(x, class = unique(c(y, class(x))))
 }
 replace_class <- function(x, new, old) {
   class(x) <- sub(old, new, class(x))
+  x
+}
+
+lp_remove_class <- function(x, y) {
+  oldClass(x) <- setdiff(oldClass(x), y)
   x
 }
 remove_class <- function(x, y) {
@@ -1082,8 +1331,6 @@ get_domain <- function(type = "") {
 get_kwargs <- function() {
   c("filename", "fileopt", "style", "traces", "layout", "frames", "world_readable")
 }
-
-
 
 
 # try to write environment variables to an .Rprofile

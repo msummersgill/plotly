@@ -1,8 +1,3 @@
-# Trace transforms (filter, groupby, aggregate, sort), which plotly.js 3
-# removed, applied in R to the built traces of plot_ly() figures with the
-# semantics of plotly.js 2's src/transforms/. Applied once when the figure is
-# built, so updatemenus that restyle a transform's attributes have no effect.
-
 # Arrays of a trace that transforms subset: atomic vectors (at any depth)
 # with one value per point. Lists named here are never per-point arrays.
 LP_TRANSFORM_SKIP <- c("transforms", "colorscale", "dimensions", "colorbar", "line_shape")
@@ -199,3 +194,4 @@ lp_transform_aggregate <- function(tr, tf, ...) {
   }
   list(tr)
 }
+

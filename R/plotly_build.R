@@ -1,9 +1,3 @@
-# Building legacy plot_ly() objects (a port of the legacy plotly package's
-# plotly_build()). Evaluates the lazily stored attributes against the data,
-# splits and maps traces (color, size, symbol, linetype, ...), registers
-# animation frames, and fills p$x$data, p$x$layout and p$x$frames. The built
-# lists are converted to a validated go_figure by legacy_figure().
-
 #' Build a figure
 #'
 #' For [plot_ly()] objects, evaluates the attribute mappings against the data
@@ -270,13 +264,13 @@ lp_group_index <- function(vars) {
   data.table::frankv(rev(codes), ties.method = "dense", na.last = "keep")
 }
 
-lp_special_attrs <- function(trace) {
-  out <- switch(class(trace)[[1]] %||l% "", plotly_segment = c("xend", "yend"), plotly_ribbon = c("ymin", "ymax"), NULL)
-  if (isTRUE(trace[["type"]] %in% c("scattermap", "scattergeo"))) out <- c(out, "x", "y")
-  out
-}
-
 lp_is3d <- function(type) (type %||l% "scatter") %in% c("mesh3d", "scatter3d", "surface")
+
+
+# ----------------------------------------------------------------
+# Functions used solely within plotly_build
+# ----------------------------------------------------------------
+
 
 lp_train_data <- function(data, trace) {
   if (inherits(trace, "plotly_ribbon")) data <- lp_ribbon_dat(data)
@@ -307,130 +301,6 @@ lp_ribbon_dat <- function(dat) {
   out
 }
 
-lp_traceify <- function(dat, x = NULL) {
-  if (length(x) == 0) return(list(dat))
-  lvls <- if (is.factor(x)) levels(x) else unique(x)
-  lvls <- lvls[lvls %in% x]
-  if (is.ordered(x)) lvls <- rev(lvls)
-  n <- length(x)
-  recurse <- function(z, idx) if (is.list(z) && !is.data.frame(z)) lapply(z, recurse, idx) else if (length(z) == n) z[idx] else z
-  # row indices of each level, in one pass
-  rows <- split(seq_len(n), factor(match(x, lvls), levels = seq_along(lvls)))
-  Map(function(l, idx) {
-    d <- lapply(dat, recurse, idx = idx)
-    oldClass(d) <- oldClass(dat)
-    d$name <- d$name %||l% as.character(l)
-    d
-  }, lvls, rows)
-}
-
-lp_verify_type <- function(trace) {
-  if (is.null(trace$type)) {
-    attrs <- names(trace)
-    trace$type <- if (all(c("x", "y", "z") %in% attrs)) {
-      if (all(c("i", "j", "k") %in% attrs)) "mesh3d" else "scatter3d"
-    } else if (all(c("x", "y") %in% attrs)) {
-      xn <- !lp_is_discrete(trace[["x"]])
-      yn <- !lp_is_discrete(trace[["y"]])
-      if (xn && yn) "scatter" else if (xn || yn) "bar" else "histogram2d"
-    } else if ("y" %in% attrs || "x" %in% attrs) {
-      "histogram"
-    } else if ("z" %in% attrs) {
-      "heatmap"
-    } else {
-      warning("No trace type specified and no positional attributes specified", call. = FALSE)
-      "scatter"
-    }
-    message("No trace type specified:\n  Based on info supplied, a '", trace$type,
-            "' trace seems appropriate.\n  Read more about this trace type -> https://plotly.com/r/reference/#", trace$type)
-  }
-  if (!is.character(trace$type) || length(trace$type) != 1) stop("The trace type must be a character vector of length 1.\n", call. = FALSE)
-  if (is.null(get_validator(trace$type)$trace_type)) {
-    stop("Trace type must be one of the following: \n'", paste(available_trace_types(), collapse = "', '"), "'", call. = FALSE)
-  }
-  if (grepl("scatter", trace$type) && is.null(trace$mode)) {
-    message("No ", trace$type, " mode specifed:\n  Setting the mode to markers\n  Read more about this attribute -> https://plotly.com/r/reference/#scatter-mode")
-    trace$mode <- "markers"
-  }
-  trace
-}
-
-lp_verify_orientation <- function(trace) {
-  xn <- !lp_is_discrete(trace[["x"]]) && !is.null(trace[["x"]])
-  yn <- !lp_is_discrete(trace[["y"]]) && !is.null(trace[["y"]])
-  if (xn && !yn && any(c("bar", "box") %in% trace[["type"]])) trace$orientation <- "h"
-  if (yn && "histogram" %in% trace[["type"]]) trace$orientation <- "h"
-  trace
-}
-
-lp_coerce_attr_defaults <- function(trace, layout) {
-  if (length(trace[["stroke"]]) && !lp_is_default(trace[["stroke"]])) trace$span <- trace[["span"]] %||l% lp_default(I(1))
-  if (trace[["type"]] %in% c("sunburst", "pie", "treemap")) {
-    trace$stroke <- trace[["stroke"]] %||l% lp_default(I(layout$paper_bgcolor %||l% "#ffffff"))
-  }
-  trace
-}
-
-# Mappings ----------------------------------------------------------------------------------
-
-lp_supply_palette <- function(default, user) {
-  for (i in seq_along(user)) {
-    idx <- names(user)[i] %||l% i
-    default[idx] <- user[i]
-  }
-  default
-}
-
-lp_map_symbol <- function(traces) {
-  lst <- lapply(traces, `[[`, "symbol")
-  n <- lengths(lst)
-  if (all(n == 0)) return(traces)
-  lvls <- lp_get_levels(unlist(compact(lst)))
-  shapes <- c(16, 17, 15, 3, 7, 8)
-  if (length(lvls) > length(shapes)) warning("The shape palette can deal with a maximum of 6 discrete values", call. = FALSE)
-  pal <- stats_named(shapes[seq_along(lvls)], lvls)
-  pal <- lp_supply_palette(pal, traces[[1]][["symbols"]])
-  valid <- c(as.character(get_validator("scatter.marker.symbol")$values$chr), as.character(get_validator("scatter.marker.symbol")$values$num))
-  for (i in which(n > 0)) {
-    s <- lst[[i]]
-    syms <- lp_lookup(if (inherits(s, "AsIs")) s else as.character(pal[as.character(s)]), LP_PCH)
-    bad <- setdiff(syms, valid)
-    if (length(bad)) warning("The following are not valid symbol codes:\n'", paste(bad, collapse = "', '"), "'", call. = FALSE)
-    traces[[i]][["marker"]] <- lp_modify_list(list(symbol = lp_default(syms)), traces[[i]][["marker"]])
-    if (!grepl("markers", traces[[i]]$mode %||l% "")) {
-      message("Adding markers to mode; otherwise symbol would have no effect.")
-      traces[[i]]$mode <- paste0(traces[[i]]$mode, "+markers")
-    }
-  }
-  traces
-}
-
-lp_map_linetype <- function(traces) {
-  lst <- lapply(traces, `[[`, "linetype")
-  n <- lengths(lst)
-  if (all(n == 0)) return(traces)
-  lvls <- lp_get_levels(unlist(compact(lst)))
-  ltys <- c("solid", "22", "42", "44", "13", "1343")
-  pal <- stats_named(ltys[seq_along(lvls)], lvls)
-  pal <- lp_supply_palette(pal, traces[[1]][["linetypes"]])
-  if (length(pal) > 6) warning("plotly.js only supports 6 different linetypes", call. = FALSE)
-  for (i in which(n > 0)) {
-    l <- lst[[i]]
-    dashes <- lp_lookup(if (inherits(l, "AsIs")) l else as.character(pal[as.character(l)]), LP_LTY)
-    valid <- c("solid", "dot", "dash", "longdash", "dashdot", "longdashdot")
-    illegal <- setdiff(dashes, valid)
-    if (length(illegal)) {
-      warning("The following are not valid linetype codes:\n'", paste(illegal, collapse = "', '"), "'\n",
-              "Valid linetypes include:\n'", paste(valid, collapse = "', '"), "'", call. = FALSE)
-    }
-    traces[[i]][["line"]] <- lp_modify_list(list(dash = lp_default(dashes)), traces[[i]][["line"]])
-    if (!grepl("lines", traces[[i]]$mode %||l% "")) {
-      message("Adding lines to mode; otherwise linetype would have no effect.")
-      traces[[i]][["mode"]] <- paste0(traces[[i]][["mode"]], "+lines")
-    }
-  }
-  traces
-}
 
 lp_map_size <- function(traces, stroke = FALSE) {
   key <- if (stroke) "span" else "size"
@@ -668,8 +538,6 @@ lp_map_color_scale <- function(traces, stroke = FALSE, title = "", colorway, na.
   }
   traces
 }
-
-# Layout and trace checks ---------------------------------------------------------------------
 
 lp_supply_defaults <- function(p) {
   if (isTRUE(p$x$subplot)) return(p)
@@ -937,8 +805,6 @@ lp_verify_attr <- function(obj, key) {
   obj
 }
 
-# Animation ------------------------------------------------------------------------------------
-
 lp_register_frames <- function(p, frame_mapping = NULL) {
   p$x$data <- lapply(p$x$data, function(tr) {
     tr[["frame"]] <- tr[["frame"]][[1]] %||l% NA
@@ -1015,6 +881,7 @@ lp_register_frames <- function(p, frame_mapping = NULL) {
 # (use heatmap). Legacy code using them is upgraded.
 LP_REMOVED_TYPES <- c(scattermapbox = "scattermap", choroplethmapbox = "choroplethmap",
                       densitymapbox = "densitymap", heatmapgl = "heatmap")
+
 # Mapbox styles that need a Mapbox token, or are gone (Stamen), as their
 # closest MapLibre style
 LP_MAPBOX_STYLES <- c("stamen-terrain" = "outdoors", "stamen-toner" = "light",
@@ -1173,4 +1040,146 @@ lp_upgrade_titles <- function(x) {
 lp_all_generated <- function(x) {
   if (lp_is_default(x) || inherits(x, "colorway")) return(TRUE)
   is.list(x) && length(x) > 0 && all(vapply(x, lp_all_generated, logical(1)))
+}
+
+lp_map_symbol <- function(traces) {
+  lst <- lapply(traces, `[[`, "symbol")
+  n <- lengths(lst)
+  if (all(n == 0)) return(traces)
+  lvls <- lp_get_levels(unlist(compact(lst)))
+  shapes <- c(16, 17, 15, 3, 7, 8)
+  if (length(lvls) > length(shapes)) warning("The shape palette can deal with a maximum of 6 discrete values", call. = FALSE)
+  pal <- stats_named(shapes[seq_along(lvls)], lvls)
+  pal <- lp_supply_palette(pal, traces[[1]][["symbols"]])
+  valid <- c(as.character(get_validator("scatter.marker.symbol")$values$chr), as.character(get_validator("scatter.marker.symbol")$values$num))
+  for (i in which(n > 0)) {
+    s <- lst[[i]]
+    syms <- lp_lookup(if (inherits(s, "AsIs")) s else as.character(pal[as.character(s)]), LP_PCH)
+    bad <- setdiff(syms, valid)
+    if (length(bad)) warning("The following are not valid symbol codes:\n'", paste(bad, collapse = "', '"), "'", call. = FALSE)
+    traces[[i]][["marker"]] <- lp_modify_list(list(symbol = lp_default(syms)), traces[[i]][["marker"]])
+    if (!grepl("markers", traces[[i]]$mode %||l% "")) {
+      message("Adding markers to mode; otherwise symbol would have no effect.")
+      traces[[i]]$mode <- paste0(traces[[i]]$mode, "+markers")
+    }
+  }
+  traces
+}
+
+lp_map_linetype <- function(traces) {
+  lst <- lapply(traces, `[[`, "linetype")
+  n <- lengths(lst)
+  if (all(n == 0)) return(traces)
+  lvls <- lp_get_levels(unlist(compact(lst)))
+  ltys <- c("solid", "22", "42", "44", "13", "1343")
+  pal <- stats_named(ltys[seq_along(lvls)], lvls)
+  pal <- lp_supply_palette(pal, traces[[1]][["linetypes"]])
+  if (length(pal) > 6) warning("plotly.js only supports 6 different linetypes", call. = FALSE)
+  for (i in which(n > 0)) {
+    l <- lst[[i]]
+    dashes <- lp_lookup(if (inherits(l, "AsIs")) l else as.character(pal[as.character(l)]), LP_LTY)
+    valid <- c("solid", "dot", "dash", "longdash", "dashdot", "longdashdot")
+    illegal <- setdiff(dashes, valid)
+    if (length(illegal)) {
+      warning("The following are not valid linetype codes:\n'", paste(illegal, collapse = "', '"), "'\n",
+              "Valid linetypes include:\n'", paste(valid, collapse = "', '"), "'", call. = FALSE)
+    }
+    traces[[i]][["line"]] <- lp_modify_list(list(dash = lp_default(dashes)), traces[[i]][["line"]])
+    if (!grepl("lines", traces[[i]]$mode %||l% "")) {
+      message("Adding lines to mode; otherwise linetype would have no effect.")
+      traces[[i]][["mode"]] <- paste0(traces[[i]][["mode"]], "+lines")
+    }
+  }
+  traces
+}
+
+
+lp_traceify <- function(dat, x = NULL) {
+  if (length(x) == 0) return(list(dat))
+  lvls <- if (is.factor(x)) levels(x) else unique(x)
+  lvls <- lvls[lvls %in% x]
+  if (is.ordered(x)) lvls <- rev(lvls)
+  n <- length(x)
+  recurse <- function(z, idx) if (is.list(z) && !is.data.frame(z)) lapply(z, recurse, idx) else if (length(z) == n) z[idx] else z
+  # row indices of each level, in one pass
+  rows <- split(seq_len(n), factor(match(x, lvls), levels = seq_along(lvls)))
+  Map(function(l, idx) {
+    d <- lapply(dat, recurse, idx = idx)
+    oldClass(d) <- oldClass(dat)
+    d$name <- d$name %||l% as.character(l)
+    d
+  }, lvls, rows)
+}
+
+lp_verify_type <- function(trace) {
+  if (is.null(trace$type)) {
+    attrs <- names(trace)
+    trace$type <- if (all(c("x", "y", "z") %in% attrs)) {
+      if (all(c("i", "j", "k") %in% attrs)) "mesh3d" else "scatter3d"
+    } else if (all(c("x", "y") %in% attrs)) {
+      xn <- !lp_is_discrete(trace[["x"]])
+      yn <- !lp_is_discrete(trace[["y"]])
+      if (xn && yn) "scatter" else if (xn || yn) "bar" else "histogram2d"
+    } else if ("y" %in% attrs || "x" %in% attrs) {
+      "histogram"
+    } else if ("z" %in% attrs) {
+      "heatmap"
+    } else {
+      warning("No trace type specified and no positional attributes specified", call. = FALSE)
+      "scatter"
+    }
+    message("No trace type specified:\n  Based on info supplied, a '", trace$type,
+            "' trace seems appropriate.\n  Read more about this trace type -> https://plotly.com/r/reference/#", trace$type)
+  }
+  if (!is.character(trace$type) || length(trace$type) != 1) stop("The trace type must be a character vector of length 1.\n", call. = FALSE)
+  if (is.null(get_validator(trace$type)$trace_type)) {
+    stop("Trace type must be one of the following: \n'", paste(available_trace_types(), collapse = "', '"), "'", call. = FALSE)
+  }
+  if (grepl("scatter", trace$type) && is.null(trace$mode)) {
+    message("No ", trace$type, " mode specifed:\n  Setting the mode to markers\n  Read more about this attribute -> https://plotly.com/r/reference/#scatter-mode")
+    trace$mode <- "markers"
+  }
+  trace
+}
+
+lp_verify_orientation <- function(trace) {
+  xn <- !lp_is_discrete(trace[["x"]]) && !is.null(trace[["x"]])
+  yn <- !lp_is_discrete(trace[["y"]]) && !is.null(trace[["y"]])
+  if (xn && !yn && any(c("bar", "box") %in% trace[["type"]])) trace$orientation <- "h"
+  if (yn && "histogram" %in% trace[["type"]]) trace$orientation <- "h"
+  trace
+}
+
+
+# Evaluate a formula against the data; other values are returned as is.
+lp_eval_attr <- function(x, data = NULL) {
+  if (!inherits(x, "formula")) return(x)
+  eval(x[[length(x)]], if (is.null(data)) list() else as.list(data), environment(x))
+}
+
+
+lp_array_ok <- function(type, path) {
+  isTRUE(lp_entry(paste(c(type, path), collapse = "."))$array_ok)
+}
+lp_has_fill <- function(trace) {
+  type <- trace[["type"]] %||l% "scatter"
+  has_fillcolor <- lp_has_attr(type, "fillcolor")
+  if (has_fillcolor && !lp_has_attr(type, "fill")) return(TRUE)
+  has_fillcolor && isTRUE((trace[["fill"]] %||l% "none") != "none")
+}
+
+lp_coerce_attr_defaults <- function(trace, layout) {
+  if (length(trace[["stroke"]]) && !lp_is_default(trace[["stroke"]])) trace$span <- trace[["span"]] %||l% lp_default(I(1))
+  if (trace[["type"]] %in% c("sunburst", "pie", "treemap")) {
+    trace$stroke <- trace[["stroke"]] %||l% lp_default(I(layout$paper_bgcolor %||l% "#ffffff"))
+  }
+  trace
+}
+
+lp_supply_palette <- function(default, user) {
+  for (i in seq_along(user)) {
+    idx <- names(user)[i] %||l% i
+    default[idx] <- user[i]
+  }
+  default
 }

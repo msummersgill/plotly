@@ -1,11 +1,3 @@
-# Linked highlighting with crosstalk (a port of the legacy plotly package's
-# highlight(), highlight_key() and supply_highlight_attrs()). plot_ly() data
-# may be a crosstalk::SharedData object: its key column becomes each trace's
-# `key` and its group name the trace's `set`. legacy_figure() moves these out
-# of the traces (they are not plotly.js attributes) into the widget settings
-# `keys`, `sets` and `frameKeys`; the widget JS puts them back and handles
-# selection and filter events (see plotly.core's inst/htmlwidgets/plotly_core.js).
-
 LP_CT_KEY <- ".crossTalkKey"
 
 lp_is_shared <- function(x) inherits(x, "SharedData")
@@ -126,12 +118,6 @@ lp_highlight_off <- function(on) {
   )
 }
 
-lp_highlight_defaults <- function() {
-  list(on = "plotly_click", off = "plotly_doubleclick", persistent = getOption("persistent", FALSE),
-       dynamic = FALSE, selectize = FALSE, opacityDim = getOption("opacityDim", 0.2),
-       selected = attrs_selected(), debounce = 0)
-}
-
 #' Attributes of selection traces
 #'
 #' Selected observations are drawn as new traces on top of the original ones;
@@ -147,41 +133,6 @@ lp_highlight_defaults <- function() {
 attrs_selected <- function(opacity = 1, ...) {
   if (opacity < 0 || 1 < opacity) stop("opacity must be between 0 and 1", call. = FALSE)
   c(list(...), list(opacity = opacity))
-}
-
-#' Data with keys for linked highlighting
-#'
-#' Creates a [crosstalk::SharedData] object for use as [plot_ly()] data:
-#' plots (and other crosstalk-compatible htmlwidgets) made from data with the
-#' same `group` are linked, so selecting observations in one highlights them
-#' in the others (see [highlight()]). Requires the crosstalk package.
-#'
-#' @param x A data frame, or a [plot_ly()] object (whose current data is
-#'   replaced by a keyed version).
-#' @param ... Passed to `crosstalk::SharedData$new()`: notably `key` (a
-#'   formula or character vector; default: row names) and `group` (the link
-#'   group name, also the selectize dropdown's label).
-#' @return A [crosstalk::SharedData] object, or the plot.
-#' @seealso [highlight()]
-#' @export
-#' @examplesIf requireNamespace("crosstalk", quietly = TRUE)
-#' d <- mtcars |> highlight_key(~cyl, group = "Cylinders")
-#' d |> plot_ly(x = ~wt, y = ~mpg) |> highlight(selectize = TRUE)
-highlight_key <- function(x, ...) UseMethod("highlight_key")
-
-#' @export
-highlight_key.plotly <- function(x, ...) {
-  lp_require_crosstalk()
-  d <- plotly_data(x)
-  d[[LP_CT_KEY]] <- NULL
-  attr(d, "set") <- NULL
-  add_data(x, crosstalk::SharedData$new(d, ...))
-}
-
-#' @export
-highlight_key.default <- function(x, ...) {
-  lp_require_crosstalk()
-  crosstalk::SharedData$new(x, ...)
 }
 
 # Build step: highlight defaults, crosstalk groups, selectize payloads and
@@ -264,3 +215,19 @@ lp_extract_keys <- function(x) {
   }
   x
 }
+
+highlight_defaults <- function() lp_highlight_defaults()
+
+
+# ----------------------------------------------------------------------------
+# Utility functions
+# ----------------------------------------------------------------------------
+
+
+lp_highlight_defaults <- function() {
+  list(on = "plotly_click", off = "plotly_doubleclick", persistent = getOption("persistent", FALSE),
+       dynamic = FALSE, selectize = FALSE, opacityDim = getOption("opacityDim", 0.2),
+       selected = attrs_selected(), debounce = 0)
+}
+
+
