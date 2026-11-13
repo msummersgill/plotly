@@ -69,7 +69,7 @@ subplot <- function(..., nrows = 1, widths = NULL, heights = NULL, margin = 0.02
   
   # some plotly functions call plotly_build()...subplot() doesn't like that
   for (i in seq_along(plots)) {
-    if (!is.null(plots[[i]][["frames"]])) {
+    if (length(plots[[i]][["frames"]])) {
       warning(
         sprintf("`subplot()` detected plot #%s was 'pre-built' and already has registered\n", i),
         "animation frames. This can cause problems and may happen by calling a \n", 
@@ -314,7 +314,7 @@ dots2plots <- function(...) {
   
   # if ... is a list (or a tibble), list(...) is a (length 1) list 
   # containing a list of plotly objects
-  if (length(dotz) == 1 && is.list(dotz[[1]]) && !is.plotly(dotz[[1]])) {
+  if (length(dotz) == 1 && is.list(dotz[[1]]) && !is.plotly(dotz[[1]]) && !inherits(dotz[[1]], "go_figure")) {
     dotz <- dotz[[1]]
   }
   

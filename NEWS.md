@@ -22,17 +22,15 @@
   (`r`/`t`) become `scatterpolar`, `titlefont`/`titleside`/`titleposition`
   move into `title`, and trace `transforms` are applied in R (so buttons that
   restyle a transform have no effect).
+* `add_trace()` and the trace helpers (`add_markers()`, `add_lines()`,
+  `add_bars()`, ...) are unchanged; their documentation points to the
+  plotly.core functions that document every supported attribute.
+* `subplot()` accepts plotly.core figures (`go_figure()`) as well as
+  `plot_ly()` and `ggplotly()` objects.
 * Minimum R version is now 4.1 so base R pipe `|>` is available for plotly.core.
 
 ## Deprecated
 
-* Trace helpers without a corresponding plotly.js trace type are deprecated
-  (warning once per session) in favour of plotly.core's: `add_markers()`,
-  `add_lines()`, `add_paths()`, `add_text()` and `add_segments()` (use
-  `add_scatter()`), `add_polygons()` and `add_ribbons()` (`add_scatter()` with
-  `fill`), `add_bars()` (`add_bar()`), `add_boxplot()` (`add_box()`),
-  `add_mesh()` (`add_mesh3d()`) and `add_area()` (`add_barpolar()`). They keep
-  working as before.
 * `orca()` and `export()` use `save_image()`; `orca_serve()` is defunct.
   `remove_typedarray_polyfill()` returns the plot unchanged. The Chart Studio functions (`api_create()`, `api()`, `signup()`,
   `plotly_POST()`, `get_figure()`, `plotly_IMAGE()`, ...) are defunct.

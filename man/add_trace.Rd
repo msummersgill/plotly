@@ -171,7 +171,24 @@ If \code{z} is a raster object (see \code{\link[=as.raster]{as.raster()}}), the 
 \item{labels}{the labels (categories) corresponding to \code{values}.}
 }
 \description{
-Add trace(s) to a plotly visualization
+\strong{Full documentation of the supported trace attributes is in
+plotly.core.} These functions build traces with plotly.core's
+\verb{add_<type>()} functions, which validate the attributes passed via \code{...}
+and document every one of them:
+\itemize{
+\item \code{add_trace()}: \link[plotly.core:add_traces]{plotly.core::add_trace()}
+\item \code{add_markers()}, \code{add_text()}, \code{add_paths()}, \code{add_lines()},
+\code{add_segments()}, \code{add_polygons()}, \code{add_ribbons()}:
+\link[plotly.core:go_scatter]{plotly.core::add_scatter()} (or
+\link[plotly.core:go_scattergl]{plotly.core::add_scattergl()})
+\item \code{add_bars()}: \link[plotly.core:go_bar]{plotly.core::add_bar()}
+\item \code{add_boxplot()}: \link[plotly.core:go_box]{plotly.core::add_box()}
+\item \code{add_area()}: \link[plotly.core:go_barpolar]{plotly.core::add_barpolar()}
+\item \code{add_mesh()}: \link[plotly.core:go_mesh3d]{plotly.core::add_mesh3d()}
+\item \code{add_pie()}, \code{add_histogram()}, \code{add_heatmap()}, \code{add_contour()}, ...:
+the plotly.core function of the same name (e.g.
+\link[plotly.core:go_pie]{plotly.core::add_pie()})
+}
 }
 \examples{
 \dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}

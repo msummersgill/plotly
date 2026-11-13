@@ -373,6 +373,24 @@ as_widget.gg <- function(x, ...) as_widget(ggplotly(x), ...)
 #' @export
 as_widget.ggmatrix <- function(x, ...) as_widget(ggplotly(x), ...)
 
+# a plotly.core figure (e.g. given to subplot()) builds like a plain list
+#' @export
+plotly_build.go_figure <- function(p, registerFrames = TRUE) {
+  plain <- function(x) if (is.list(x)) lapply(unclass(x), plain) else x
+  x <- plain(unclass(p)[c("data", "layout", if (length(p$frames)) "frames")])
+  # use plot_ly()'s default margins, not plotly.js's
+  x$layout$margin <- x$layout$margin %||% list(b = 40, l = 60, t = 25, r = 10)
+  # settings (config, source, ...) are plotly_<name> attributes; not the data
+  for (a in setdiff(grep("^plotly_", names(attributes(p)), value = TRUE), "plotly_data")) {
+    x[[sub("^plotly_", "", a)]] <- attr(p, a)
+  }
+  x$source <- x$source %||% "A"
+  w <- as_widget(x)
+  # plot_ly()'s default config (unless the figure has its own)
+  if (is.null(x$config)) w <- config(w)
+  plotly_build(w, registerFrames)
+}
+
 # plotly.core's add_<type>() for plot_ly() objects -------------------------------
 
 # For every trace type without its own method (add_histogram(), add_pie(),
@@ -389,17 +407,3 @@ local({
     }), envir = ns)
   }
 })
-
-# Deprecations ------------------------------------------------------------------
-
-deprecation_shown <- new.env(parent = emptyenv())
-
-# Once per session: `fn` is deprecated in favour of `instead`
-deprecate_trace_helper <- function(fn, instead) {
-  # not for plotly's own uses (e.g. plot_dendro())
-  if (identical(topenv(parent.frame(2)), topenv())) return(invisible())
-  if (isTRUE(deprecation_shown[[fn]])) return(invisible())
-  deprecation_shown[[fn]] <- TRUE
-  warning("`", fn, "()` is deprecated; use ", instead, " instead (from plotly.core). ",
-          "This warning is shown once per session.", call. = FALSE)
-}

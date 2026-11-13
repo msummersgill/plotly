@@ -21,6 +21,25 @@ add_data <- function(p, data = NULL) {
 
 #' Add trace(s) to a plotly visualization
 #' 
+#' @description
+#' \strong{Full documentation of the supported trace attributes is in
+#' plotly.core.} These functions build traces with plotly.core's
+#' `add_<type>()` functions, which validate the attributes passed via `...`
+#' and document every one of them:
+#' 
+#' * `add_trace()`: [plotly.core::add_trace()][plotly.core::add_traces]
+#' * `add_markers()`, `add_text()`, `add_paths()`, `add_lines()`,
+#'   `add_segments()`, `add_polygons()`, `add_ribbons()`:
+#'   [plotly.core::add_scatter()][plotly.core::go_scatter] (or
+#'   [plotly.core::add_scattergl()][plotly.core::go_scattergl])
+#' * `add_bars()`: [plotly.core::add_bar()][plotly.core::go_bar]
+#' * `add_boxplot()`: [plotly.core::add_box()][plotly.core::go_box]
+#' * `add_area()`: [plotly.core::add_barpolar()][plotly.core::go_barpolar]
+#' * `add_mesh()`: [plotly.core::add_mesh3d()][plotly.core::go_mesh3d]
+#' * `add_pie()`, `add_histogram()`, `add_heatmap()`, `add_contour()`, ...:
+#'   the plotly.core function of the same name (e.g.
+#'   [plotly.core::add_pie()][plotly.core::go_pie])
+#' 
 #' @inheritParams plot_ly
 #' @param p,fig a plotly object
 #' @param inherit inherit attributes from [plot_ly()]?
@@ -181,7 +200,6 @@ add_trace.plotly <- function(fig, ...,
 #' @export
 add_markers <- function(p, x = NULL, y = NULL, z = NULL, ..., 
                         data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_markers", "`add_scatter(mode = \"markers\")` or `add_scattergl()`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -203,7 +221,6 @@ add_markers <- function(p, x = NULL, y = NULL, z = NULL, ...,
 #' @export
 add_text <- function(p, x = NULL, y = NULL, z = NULL, text = NULL, ...,
                      data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_text", "`add_scatter(mode = \"text\")`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -224,7 +241,6 @@ add_text <- function(p, x = NULL, y = NULL, z = NULL, text = NULL, ...,
 #' @export
 add_paths <- function(p, x = NULL, y = NULL, z = NULL, ...,
                       data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_paths", "`add_scatter(mode = \"lines\")`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -245,7 +261,6 @@ add_paths <- function(p, x = NULL, y = NULL, z = NULL, ...,
 #' @export
 add_lines <- function(p, x = NULL, y = NULL, z = NULL, ...,
                       data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_lines", "`add_scatter(mode = \"lines\")`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -267,7 +282,6 @@ add_lines <- function(p, x = NULL, y = NULL, z = NULL, ...,
 #' @export
 add_segments <- function(p, x = NULL, y = NULL, xend = NULL, yend = NULL, ...,
                          data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_segments", "`add_scatter()`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     xend <- xend %||% p$x$attrs[[1]][["xend"]]
@@ -291,7 +305,6 @@ add_segments <- function(p, x = NULL, y = NULL, xend = NULL, yend = NULL, ...,
 #' @export
 add_polygons <- function(p, x = NULL, y = NULL, ...,
                          data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_polygons", "`add_scatter(fill = \"toself\")`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -391,7 +404,6 @@ add_table.plotly <- function(fig, ..., rownames = TRUE, data = NULL, inherit = T
 #' @export
 add_ribbons <- function(p, x = NULL, ymin = NULL, ymax = NULL, ...,
                         data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_ribbons", "`add_scatter(fill = \"tonexty\")`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     ymin <- ymin %||% p$x$attrs[[1]][["ymin"]]
@@ -453,7 +465,6 @@ add_image.plotly <- function(fig, z = NULL, colormodel = NULL, ..., data = NULL,
 #' @export
 add_area <- function(p, r = NULL, theta = NULL, t = NULL, ...,
                      data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_area", "`add_barpolar()`")
   if (!is.null(t)) {
     message(
       "Since `add_area()` now uses the barpolar instead of the area trace, ", 
@@ -501,7 +512,6 @@ add_pie.plotly <- function(fig, values = NULL, labels = NULL, ...,
 #' @export
 add_bars <- function(p, x = NULL, y = NULL, ...,
                      data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_bars", "`add_bar()`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -628,7 +638,6 @@ add_contour.plotly <- function(fig, z = NULL, ..., data = NULL, inherit = TRUE) 
 #' @rdname add_trace
 #' @export
 add_boxplot <- function(p, x = NULL, y = NULL, ..., data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_boxplot", "`add_box()`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]
@@ -665,7 +674,6 @@ add_surface.plotly <- function(fig, z = NULL, ..., data = NULL, inherit = TRUE) 
 #' @export
 add_mesh <- function(p, x = NULL, y = NULL, z = NULL, ..., 
                         data = NULL, inherit = TRUE) {
-  deprecate_trace_helper("add_mesh", "`add_mesh3d()`")
   if (inherit) {
     x <- x %||% p$x$attrs[[1]][["x"]]
     y <- y %||% p$x$attrs[[1]][["y"]]

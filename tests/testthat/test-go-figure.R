@@ -30,21 +30,14 @@ test_that("plotly.core's add_<type>() functions add layers to plot_ly() objects 
   expect_identical(plotly_build(p2)$x$data[[1]]$type, "scatter")
 })
 
-test_that("trace helpers without a graph object are deprecated, once per session", {
-  rm(list = ls(plotly:::deprecation_shown), envir = plotly:::deprecation_shown)
+test_that("legacy trace helpers are not deprecated", {
   p <- plot_ly(mtcars, x = ~wt, y = ~mpg)
-  expect_warning(p1 <- add_markers(p), "add_scatter")
-  expect_silent(add_markers(p))
+  expect_silent(p1 <- add_markers(p))
   expect_identical(plotly_build(p1)$x$data[[1]]$mode, "markers")
-  expect_warning(add_lines(p), "add_scatter")
-  expect_warning(add_bars(p), "add_bar")
-  expect_warning(add_boxplot(p), "add_box")
+  expect_silent(plotly_build(add_bars(add_lines(add_boxplot(p)))))
   # add_lines() keeps sorting by x
   d <- data.frame(x = c(3, 1, 2), y = 1:3)
   expect_equivalent(plotly_build(add_lines(plot_ly(d, x = ~x, y = ~y)))$x$data[[1]]$x, c(1, 2, 3))
-  # plotly's own uses don't warn
-  rm(list = ls(plotly:::deprecation_shown), envir = plotly:::deprecation_shown)
-  expect_silent(plotly_build(plot_dendro(as.dendrogram(hclust(dist(USArrests[1:5, ]))))))
 })
 
 test_that("Mapbox traces and layout are upgraded to MapLibre map ones", {
@@ -91,4 +84,14 @@ test_that("config, linked highlighting and frames carry over to the figure", {
   a <- rendered(plot_ly(data.frame(x = rep(1:3, 2), y = 1:6, f = rep(1:2, each = 3)), x = ~x, y = ~y,
                         frame = ~f, type = "scatter", mode = "markers"))
   expect_length(a$frames, 2)
+})
+
+test_that("subplot() accepts plotly.core figures", {
+  f1 <- plotly.core::go_figure() |> plotly.core::add_scattergl(x = 1:3, y = 1:3) |>
+    plotly.core::update_layout(yaxis = list(title = "A"))
+  f2 <- plotly.core::go_figure() |> plotly.core::add_bar(x = 1:3, y = 3:1)
+  expect_silent(s <- subplot(f1, f2, plot_ly(x = 1:2, y = 1:2, type = "scatter", mode = "markers"), nrows = 3, shareX = TRUE, titleY = TRUE))
+  b <- plotly_build(s)$x
+  expect_equal(vapply(b$data, function(tr) tr$yaxis, ""), c("y", "y2", "y3"))
+  expect_equal(b$layout$yaxis$title$text %||% b$layout$yaxis$title, "A")
 })
