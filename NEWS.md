@@ -1,3 +1,41 @@
+# plotly (development version)
+
+## Rendering with plotly.core
+
+* Plots are now rendered by the plotly.core package, which bundles a current
+  plotly.js (4.x). `plot_ly()` and `ggplotly()` objects are still built by
+  `plotly_build()`; the result is converted to a plotly.core figure (see the
+  new `as_go_figure()`), adding each trace with plotly.core's `add_<type>()`
+  and the layout with `update_layout()`, which validate them. Invalid
+  attributes are dropped with a warning.
+* plotly.core's `add_<trace type>()` functions (e.g. `add_scatter()`,
+  `add_bar()`, `add_violin()`) are re-exported and add a layer of that type to
+  a `plot_ly()` object, evaluated when the plot is built, like `add_trace()`.
+* Shiny (`plotlyOutput()`, `renderPlotly()`, `event_data()`, `plotlyProxy()`),
+  `save_image()`/`kaleido()`, `plotly_json()`, `last_plot()` and `TeX()` are
+  re-exported from plotly.core.
+* Features plotly.js has removed are upgraded when a plot is built: Mapbox
+  traces and `layout.mapbox` become their MapLibre `map` equivalents (no
+  access token is needed), `heatmapgl` becomes `heatmap`, legacy polar charts
+  (`r`/`t`) become `scatterpolar`, `titlefont`/`titleside`/`titleposition`
+  move into `title`, and trace `transforms` are applied in R (so buttons that
+  restyle a transform have no effect).
+
+## Deprecated
+
+* Trace helpers without a corresponding plotly.js trace type are deprecated
+  (warning once per session) in favour of plotly.core's: `add_markers()`,
+  `add_lines()`, `add_paths()`, `add_text()` and `add_segments()` (use
+  `add_scatter()`), `add_polygons()` and `add_ribbons()` (`add_scatter()` with
+  `fill`), `add_bars()` (`add_bar()`), `add_boxplot()` (`add_box()`),
+  `add_mesh()` (`add_mesh3d()`) and `add_area()` (`add_barpolar()`). They keep
+  working as before.
+* `orca()` and `export()` use `save_image()`; `orca_serve()` is defunct.
+  `partial_bundle()` and `remove_typedarray_polyfill()` return the plot
+  unchanged. The Chart Studio functions (`api_create()`, `api()`, `signup()`,
+  `plotly_POST()`, `get_figure()`, `plotly_IMAGE()`, ...) are defunct.
+* Requires R 4.1.
+
 # plotly 4.12.1
 
 * Completed the `plot_ly()` documentation for what happens when `type` is not

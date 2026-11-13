@@ -115,14 +115,8 @@ highlight <- function(p, on = "plotly_click", off,
     color <- color[1] 
   }
   
-  # attach HTML dependencies (these libraries are used in the HTMLwidgets.renderValue() method)
-  # TODO: only attach these when keys are present!
-  if (!identical(selectize, FALSE)) {
-    p$dependencies <- c(p$dependencies, list(selectizeLib()))
-  }
-  if (dynamic) {
-    p$dependencies <- c(p$dependencies, list(colourPickerLib()))
-  }
+  # (plotly.core attaches the selectize and colourpicker libraries when the
+  # plot is rendered)
   
   
   # TODO: expose unhover?
@@ -204,30 +198,4 @@ highlight_defaults <- function() {
   args <- formals(highlight)[-1]
   # have to evaluate args now that some of them are functions...
   compact(lapply(args, function(x) tryNULL(eval(x))))
-}
-
-selectizeLib <- function(bootstrap = TRUE) {
-  htmltools::htmlDependency(
-    name = "selectize", 
-    version = "0.12.0", 
-    package = "plotly",
-    src = dependency_dir("selectize"),
-    stylesheet = if (bootstrap) "selectize.bootstrap3.css",
-    script = "selectize.min.js"
-  )
-}
-
-colourPickerLib <- function() {
-  htmltools::htmlDependency(
-    name = "colourpicker", 
-    version = "1.1", 
-    package = "plotly",
-    src = dependency_dir("colourpicker"),
-    stylesheet = "colourpicker.min.css",
-    script = "colourpicker.min.js"
-  )
-}
-
-dependency_dir <- function(...) {
-  file.path('htmlwidgets', 'lib', ...)
 }

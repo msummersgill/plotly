@@ -2,9 +2,6 @@
 % Please edit documentation in R/api_exports.R
 \name{api_create}
 \alias{api_create}
-\alias{api_create.plotly}
-\alias{api_create.ggplot}
-\alias{api_create.data.frame}
 \alias{api_download_plot}
 \alias{api_download_grid}
 \alias{api}
@@ -17,24 +14,6 @@ api_create(
   sharing = c("public", "private", "secret"),
   ...
 )
-
-\method{api_create}{plotly}(
-  x = last_plot(),
-  filename = NULL,
-  fileopt = "overwrite",
-  sharing = "public",
-  ...
-)
-
-\method{api_create}{ggplot}(
-  x = last_plot(),
-  filename = NULL,
-  fileopt = "overwrite",
-  sharing = "public",
-  ...
-)
-
-\method{api_create}{data.frame}(x, filename = NULL, fileopt = "overwrite", sharing = "public", ...)
 
 api_download_plot(id, username)
 
@@ -92,7 +71,7 @@ plotly objects via \code{api_download_plot()}/\code{api_download_grid()}.
 For anything else, use \code{api()}.
 }
 \examples{
-\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) withAutoprint(\{ # examplesIf}
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 
 \dontrun{
 

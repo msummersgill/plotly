@@ -108,6 +108,7 @@ getLevels <- function(x) {
 }
 
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
+tryFALSE <- function(expr) tryCatch(expr, error = function(e) FALSE)
 
 # Don't attempt to do "tidy" data training on these trace types
 # Note that non-tidy traces expect/anticipate data_array's of varying lengths
@@ -932,10 +933,11 @@ verify_guides <- function(p) {
 }
 
 verify_mathjax <- function(p) {
-  hasMathjax <- "mathjax" %in% sapply(p$dependencies, "[[", "name")
+  hasMathjax <- !is.null(p$x$mathjax)
   if (hasMathjax) return(p)
   
-  hasTeX <- any(rapply(p$x, is.TeX))
+  # (TeX() wraps text in $...$)
+  hasTeX <- any(unlist(rapply(p$x, function(x) is.character(x) && any(grepl("^\\$.+\\$$", x)), how = "unlist")))
   if (!hasTeX) return(p)
   
   # TODO: it would be much better to add the dependency here, but
@@ -1098,25 +1100,6 @@ get_domain <- function(type = "") {
 get_kwargs <- function() {
   c("filename", "fileopt", "style", "traces", "layout", "frames", "world_readable")
 }
-
-# "common" POST header fields
-api_headers <- function() {
-  v <- as.character(get_package_version("plotly"))
-  httr::add_headers(
-    plotly_version = v,
-    `Plotly-Client-Platform` = paste("R", v),
-    `Content-Type` = "application/json",
-    Accept = "*/*"
-  )
-}
-
-api_auth <- function() {
-  httr::authenticate(
-    verify("username"),
-    verify("api_key")
-  )
-}
-
 
 # try to write environment variables to an .Rprofile
 cat_profile <- function(key, value, path = "~") {

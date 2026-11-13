@@ -334,6 +334,10 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   # (like figures pulled from a plotly server)
   p$x$data <- setNames(c(p$x$data, traces), NULL)
   
+  # features plotly.js has removed: legacy polar charts and trace transforms
+  # (see R/go_figure.R and R/transforms.R)
+  p <- apply_transforms(upgrade_legacy_polar(p))
+  
   # supply linked highlighting options/features
   p <- supply_highlight_attrs(p)
   
@@ -390,6 +394,10 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   # verify colorscale attributes are in a sensible data structure
   p <- verify_colorscale(p)
   
+  # upgrade Mapbox traces/layout, heatmapgl and title aliases, which plotly.js
+  # has removed (see R/go_figure.R)
+  p <- upgrade_removed(p)
+  
   # verify plot attributes are legal according to the plotly.js spec
   p <- verify_attr_names(p)
   # box up 'data_array' attributes where appropriate
@@ -398,8 +406,6 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   # make sure we're including mathjax (if TeX() is used)
   p <- verify_mathjax(p)
   
-  # if a partial bundle was specified, make sure it supports the visualization
-  p <- verify_partial_bundle(p)
 
   # make sure plots don't get sent out of the network (for enterprise)
   p$x$base_url <- get_domain()

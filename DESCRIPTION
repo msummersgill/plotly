@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.12.1
+Version: 4.12.1.9000
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -23,12 +23,12 @@ Description: Create interactive web graphics from 'ggplot2' graphs and/or a cust
 URL: https://plotly-r.com, https://github.com/plotly/plotly.R, https://plotly.com/r/
 BugReports: https://github.com/plotly/plotly.R/issues
 Depends:
-    R (>= 3.2.0),
+    R (>= 4.1.0),
     ggplot2 (>= 3.0.0)
 Imports:
+    plotly.core,
     tools,
     scales,
-    httr (>= 1.3.0),
     jsonlite (>= 1.6),
     magrittr,
     digest,
@@ -44,9 +44,9 @@ Imports:
     rlang (>= 1.0.0),
     crosstalk,
     purrr,
-    data.table,
-    promises
+    data.table
 Suggests:
+    httr,
     MASS,
     maps,
     hexbin,
@@ -76,6 +76,8 @@ Suggests:
     reticulate,
     rsvg,
     ggridges
+Remotes:
+    msummersgill/plotly.R.core@split-compat
 LazyData: true
 RoxygenNote: 7.3.3
 Encoding: UTF-8
