@@ -3,7 +3,7 @@
 ## Rendering with plotly.core
 
 * Plots are now rendered by the plotly.core package, which bundles a current
-  plotly.js (4.x). `plot_ly()` and `ggplotly()` objects are still built by
+  plotly.js (4.3). `plot_ly()` and `ggplotly()` objects are still built by
   `plotly_build()`; the result is converted to a plotly.core figure (see the
   new `as_go_figure()`), adding each trace with plotly.core's `add_<type>()`
   and the layout with `update_layout()`, which validate them. Invalid
@@ -20,6 +20,7 @@
   (`r`/`t`) become `scatterpolar`, `titlefont`/`titleside`/`titleposition`
   move into `title`, and trace `transforms` are applied in R (so buttons that
   restyle a transform have no effect).
+* Minimum R version is now 4.1 so base R pipe `|>` is available for plotly.core.
 
 ## Deprecated
 
@@ -34,7 +35,6 @@
   `partial_bundle()` and `remove_typedarray_polyfill()` return the plot
   unchanged. The Chart Studio functions (`api_create()`, `api()`, `signup()`,
   `plotly_POST()`, `get_figure()`, `plotly_IMAGE()`, ...) are defunct.
-* Requires R 4.1.
 
 # plotly 4.12.1
 

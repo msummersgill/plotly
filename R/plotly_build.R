@@ -398,8 +398,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   # has removed (see R/go_figure.R)
   p <- upgrade_removed(p)
   
-  # verify plot attributes are legal according to the plotly.js spec
-  p <- verify_attr_names(p)
+  # (attributes are validated by plotly.core when the plot is rendered)
   # box up 'data_array' attributes where appropriate
   p <- verify_attr_spec(p)
   

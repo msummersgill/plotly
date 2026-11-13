@@ -79,15 +79,7 @@ to_milliseconds <- function(x) {
 
 # apply a function to x, retaining class and "special" plotly attributes
 retain <- function(x, f = identity) {
-  y <- structure(f(x), class = oldClass(x))
-  attrs <- attributes(x)
-  # TODO: do we set any other "special" attributes internally 
-  # (grepping "structure(" suggests no)
-  attrs <- attrs[names(attrs) %in% "apiSrc"]
-  if (length(attrs)) {
-    attributes(y) <- attrs
-  }
-  y
+  structure(f(x), class = oldClass(x))
 }
 
 deparse2 <- function(x) {
@@ -445,34 +437,6 @@ supply_highlight_attrs <- function(p) {
 }
 
 
-# make sure plot attributes adhere to the plotly.js schema
-verify_attr_names <- function(p) {
-  # some layout attributes (e.g., [x-y]axis can have trailing numbers)
-  attrs_name_check(
-    sub("[0-9]+$", "", names(p$x$layout)),
-    c(names(Schema$layout$layoutAttributes), c("boxmode", "barmode", "bargap", "mapType")),
-    "layout"
-  )
-  attrs_name_check(
-    names(p$x$config),
-    names(Schema$config),
-    "config"
-  )
-  for (tr in seq_along(p$x$data)) {
-    thisTrace <- p$x$data[[tr]]
-    attrSpec <- Schema$traces[[thisTrace$type %||% "scatter"]]$attributes
-    # make sure attribute names are valid
-    attrs_name_check(
-      names(thisTrace), 
-      c(names(attrSpec), "key", "set", "frame", "transforms", "_isNestedKey", "_isSimpleKey", "_isGraticule", "_bbox"), 
-      thisTrace$type
-    )
-  }
-  invisible(p)
-}
-
-
-
 # ensure both the layout and trace attributes adhere to the plot schema
 verify_attr_spec <- function(p) {
   if (!is.null(p$x$layout)) {
@@ -515,19 +479,6 @@ verify_attr <- function(proposed, schema, layoutAttr = FALSE) {
       proposed[["text"]] <- paste(uniq(proposed[["text"]]), collapse = "\n")
     }
     
-    # ensure data_arrays of length 1 are boxed up by to_JSON()
-    if (isDataArray) {
-      proposed[[attr]] <- i(proposed[[attr]])
-    }
-    
-    # tag 'src-able' attributes (needed for api_create())
-    # note that layout has 'src-able' attributes that shouldn't
-    # be turned into grids https://github.com/ropensci/plotly/pull/1489
-    isSrcAble <- !is.null(schema[[paste0(attr, "src")]]) && length(proposed[[attr]]) > 1
-    if ((isDataArray || isSrcAble) && !isTRUE(layoutAttr)) {
-      proposed[[attr]] <- structure(proposed[[attr]], apiSrc = TRUE)
-    }
-    
     if (length(proposed[["name"]]) > 0) {
       proposed$name <- uniq(proposed$name)
     }
@@ -557,22 +508,6 @@ verify_attr <- function(proposed, schema, layoutAttr = FALSE) {
   }
   
   proposed
-}
-
-attrs_name_check <- function(proposedAttrs, validAttrs, type = "scatter") {
-  illegalAttrs <- setdiff(proposedAttrs, validAttrs)
-  if ("titlefont" %in% illegalAttrs) {
-    warning("The titlefont attribute is deprecated. Use title = list(font = ...) instead.", call. = FALSE)
-    illegalAttrs <- setdiff(illegalAttrs, "titlefont")
-  }
-  if (length(illegalAttrs)) {
-    warning("'", type, "' objects don't have these attributes: '",
-            paste(illegalAttrs, collapse = "', '"), "'\n", 
-            "Valid attributes include:\n'",
-            paste(validAttrs, collapse = "', '"), "'\n", 
-            call. = FALSE)
-  }
-  invisible(proposedAttrs)
 }
 
 # make sure trace type is valid

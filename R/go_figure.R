@@ -190,6 +190,13 @@ as_go_figure <- function(p) {
   # plotly 4.x plots have no template
   if (is.null(x$layout$template)) x$layout$template <- plotly.core::get_template("none")
   if (!is.null(x$config$locale)) x$config$locale <- tolower(x$config$locale)
+  # config options plotly.js doesn't have (config() stores them as given)
+  bad <- setdiff(names(x$config), names(Schema$config))
+  if (length(bad)) {
+    warning("Invalid config option(s), ignored: '", paste(bad, collapse = "', '"), "'\n",
+            "Valid options include: '", paste(names(Schema$config), collapse = "', '"), "'", call. = FALSE)
+    x$config <- x$config[setdiff(names(x$config), bad)]
+  }
 
   fig <- validated(plotly.core::go_figure(frames = x$frames), plotly.core::go_figure(frames = x$frames, skip_invalid = TRUE))
   for (tr in x$data) {
