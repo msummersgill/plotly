@@ -28,6 +28,8 @@
 * `subplot()` accepts plotly.core figures (`go_figure()`) as well as
   `plot_ly()` and `ggplotly()` objects.
 * Minimum R version is now 4.1 so base R pipe `|>` is available for plotly.core.
+* Building a heatmap (or another trace with a `z` matrix) is faster: checking
+  whether `z` holds a single value no longer runs `unique()` on its rows.
 
 ## Deprecated
 

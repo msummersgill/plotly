@@ -677,6 +677,16 @@ map_size <- function(traces, stroke = FALSE) {
 }
 
 # appends a new (empty) trace to generate (plot-wide) colorbar/colorscale
+# length(uniq(x)) == 1, without unique() on the rows of a matrix (e.g. a
+# heatmap's z), which is slow for large ones: for a matrix that's when its
+# distinct rows hold exactly one non-missing value between them
+is_singular <- function(x) {
+  if (!is.matrix(x) || length(x) <= 1) return(length(uniq(x)) == 1)
+  n <- rowSums(!is.na(x))
+  if (any(n > 1) || !any(n == 1)) return(FALSE)
+  nrow(unique(x[n == 1, , drop = FALSE])) == 1
+}
+
 map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "transparent") {
   color <- if (stroke) {
     lapply(traces, function(x) { x[["stroke"]] %||% x[["color"]] })
@@ -693,8 +703,7 @@ map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "
   isNumeric <- vapply(color, is.numeric, logical(1)) & !isConstant
   isDiscrete <- vapply(color, is.discrete, logical(1)) & !isConstant
   if (any(isNumeric & isDiscrete)) stop("Can't have both discrete and numeric color mappings", call. = FALSE)
-  uniqColor <- lapply(color, uniq)
-  isSingular <- lengths(uniqColor) == 1
+  isSingular <- vapply(color, is_singular, logical(1))
   
   # color/colorscale/colorbar attribute placement depends on trace type and marker mode
   # TODO: remove these and make numeric colorscale mapping more like the rest
