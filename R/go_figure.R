@@ -314,6 +314,12 @@ matrix_colorscales <- function(x) {
 drop_blank_family <- function(x) {
   if (!is.list(x)) return(x)
   if (identical(x[["family"]], "")) x[["family"]] <- NULL
+  # ggplotly() gives the fonts of blank theme elements size 0 (invalid, unused)
+  fonts <- grepl("font$", names(x) %||% character())
+  x[fonts] <- lapply(x[fonts], function(f) {
+    if (is.list(f) && isTRUE(f[["size"]] == 0)) f[["size"]] <- NULL
+    f
+  })
   x[] <- lapply(x, drop_blank_family)
   x
 }
